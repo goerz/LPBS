@@ -1,0 +1,107 @@
+#!/usr/bin/perl -w
+use strict;
+use lib qw(/home/mgoerz/lib/perl5);
+use Email::MessageID;
+
+# Author: Michael Goerz <goerz@physik.fu-berlin.de>
+
+# local submission tool
+
+die ("Missing run script\n") if (@ARGV < 1);
+my $pbs = $ARGV[0];
+
+# Set variables
+my $hostname = `hostname`;
+chomp($hostname);
+my $scratch_folder = "/amd/$hostname/0/goerz/scratch";
+my $message_id = Email::MessageID->new( host => $hostname );
+my $from_address = 'goerz@physik.fu-berlin.de';
+my $to_address = 'goerz@physik.fu-berlin.de';
+my $job_name = 'JOBNAME';
+# Get job_name from PBS script
+open(PBS, $pbs) or die ("Couldn't open $pbs\n");
+foreach my $pbs_line (<PBS>){
+    if ($pbs_line =~ /#PBS -N (.*)$/){
+        $job_name = $1;
+    }
+}
+close(PBS);
+
+# Get the last job ID from the tracker
+my $tracker = $ENV{'HOME'}.'/.local_runs';
+open(TRACKER, $tracker) or die ("Couldn't open $tracker\n");
+my $last_job_id = <TRACKER>;
+if (defined($last_job_id) and $last_job_id =~ /\d+/){ 
+    chomp($last_job_id);
+} else {
+    $last_job_id = 0;
+}
+close TRACKER;
+
+# Fork and execute
+my $new_job_id = $last_job_id + 1;
+my $full_job_id = "$new_job_id.$hostname.physik.fu-berlin.de";
+my $new_pid = fork();
+if (not defined $new_pid) {
+    # couldn't fork
+    print "Resources not available.\n";
+} elsif ($new_pid == 0) {
+    # child process
+    my $pwd = `pwd`;
+    chomp($pwd);
+    if ( -d $scratch_folder){
+        mkdir("$scratch_folder/$full_job_id");
+    } else {
+        die("$scratch_folder does not exist\n");
+    }
+    my $code = system("PBS_O_WORKDIR=$pwd PBS_JOBID=$full_job_id bash $pbs 2>$job_name.o$new_job_id.local");
+    if ($to_address ne ''){
+        open(EMAIL, "|mail.pl --messageid=$message_id --from=$from_address --to=$to_address --subject=\"PBS JOB $full_job_id\" > /dev/null") or die ("Couldn't send email\n");
+        print EMAIL "PBS Job Id: $full_job_id\n";
+        print EMAIL "Job Name:   $job_name\n";
+        print EMAIL "Execution terminated\n";
+        print EMAIL "Exit_status=$code\n";
+        print EMAIL "\nDue to exit status, $scratch_folder/$full_job_id was not deleted\n";
+        close(EMAIL);
+    }
+    if ($code == 0){                                                            
+        system("rm -rf $scratch_folder/$full_job_id");                          
+    }
+    exit(0);
+} else {
+    # parent process
+    open(NEWTRACKER, ">$tracker.tmp") or die ("Couldn't open $tracker\n");
+    open(TRACKER, $tracker) or die ("Couldn't open $tracker\n");
+    print NEWTRACKER "$new_job_id\n";
+    $last_job_id = <TRACKER>;
+    # clean up tracker, add self
+    foreach my $line (<TRACKER>){
+        chomp($line);
+        if ($line =~ m'^([0-9]+) (.+) ([0-9]+) ([0-9]+)$'){
+            my $job_id = $1;
+            my $job_name = $2;
+            my $pid = $3;
+            my $start_time = $4;
+            my $process = `ps -p $pid | grep $pid`;
+        } else {
+            print "line = '".$line."'\n";
+            die("Unexpected format in $tracker\n");
+        }
+    }
+    my $time_stamp = time();
+    print NEWTRACKER "$new_job_id $job_name $new_pid $time_stamp\n";
+    close TRACKER;
+    close NEWTRACKER;
+    system("mv $tracker.tmp $tracker");
+    if ($to_address ne ''){
+        open(EMAIL, "|mail.pl --replyto=$message_id --from=$from_address --to=$to_address --subject=\"PBS JOB $full_job_id\" > /dev/null") or die ("Couldn't send email\n");
+        print EMAIL "PBS Job Id: $full_job_id\n";
+        print EMAIL "Job Name:   $job_name\n";
+        print EMAIL "Begun execution\n";
+        close(EMAIL);
+    }
+    print "$full_job_id\n";
+    exit(0);
+}
+
+

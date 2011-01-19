@@ -1,0 +1,37 @@
+#!/usr/bin/perl -w
+use strict;
+
+# Author: Michael Goerz <goerz@physik.fu-berlin.de>
+
+my $tracker = $ENV{'HOME'}.'/.local_runs';
+
+open(NEWTRACKER, ">$tracker.tmp") or die ("Couldn't open $tracker\n");
+open(TRACKER, $tracker) or die ("Couldn't open $tracker\n");
+my $last_job_id = <TRACKER>;
+print NEWTRACKER $last_job_id;
+# clean up tracker, add self
+foreach my $line (<TRACKER>){
+    chomp($line);
+    if ($line =~ m'^([0-9]+) (.+) ([0-9]+) ([0-9]+)$'){
+        my $job_id = $1;
+        my $job_name = $2;
+        my $pid = $3;
+        my $start_time = $4;
+        my $process = `ps -p $pid | grep $pid`;
+        if ($process ne ''){
+            my $runtime = time() - $start_time;
+            my $hours = int($runtime / 3600);
+            $runtime = $runtime - $hours * 3600;
+            my $minutes = int($runtime / 60);
+            my $seconds = $runtime - $minutes * 60;
+            print "$job_id\t$job_name\t$hours:$minutes:$seconds\n";
+            print NEWTRACKER $line, "\n";
+        }
+    } else {
+        print "line = '".$line."'\n";
+        die("Unexpected format in $tracker\n");
+    }
+}
+close TRACKER;
+close NEWTRACKER;
+system("mv $tracker.tmp $tracker");
