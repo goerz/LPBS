@@ -1,107 +1,253 @@
-#!/usr/bin/perl -w
-use strict;
-use lib qw(/home/mgoerz/lib/perl5);
-use Email::MessageID;
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
-# Author: Michael Goerz <goerz@physik.fu-berlin.de>
+############################################################################
+#    Copyright (C) 2011 by Michael Goerz                                   #
+#    http://michaelgoerz.net                                               #
+#                                                                          #
+#    This program is free software; you can redistribute it and/or modify  #
+#    it under the terms of the GNU General Public License as published by  #
+#    the Free Software Foundation; either version 3 of the License, or     #
+#    (at your option) any later version.                                   #
+#                                                                          #
+#    This program is distributed in the hope that it will be useful,       #
+#    but WITHOut ANY WARRANTY; without even the implied warranty of        #
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         #
+#    GNU General Public License for more details.                          #
+#                                                                          #
+#    You should have received a copy of the GNU General Public License     #
+#    along with this program; if not, write to the                         #
+#    Free Software Foundation, Inc.,                                       #
+#    59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
+############################################################################
 
-# local submission tool
+import os
+import shutil
+import os.path
+import sys
+import socket
+import ConfigParser
+import subprocess
+from optparse import OptionParser
+from LPBS.JobIDManager import get_new_job_id, set_lock, release_lock
+from LPBS.Config import get_config, verify_lpbs_home, full_expand
+from LPBS.PBSFile import set_options_from_pbs_script
+from LPBS.Notifications import notify, log
 
-die ("Missing run script\n") if (@ARGV < 1);
-my $pbs = $ARGV[0];
+"""
+Submit a job to the local workstation
+"""
 
-# Set variables
-my $hostname = `hostname`;
-chomp($hostname);
-my $scratch_folder = "/amd/$hostname/0/goerz/scratch";
-my $message_id = Email::MessageID->new( host => $hostname );
-my $from_address = 'goerz@physik.fu-berlin.de';
-my $to_address = 'goerz@physik.fu-berlin.de';
-my $job_name = 'JOBNAME';
-# Get job_name from PBS script
-open(PBS, $pbs) or die ("Couldn't open $pbs\n");
-foreach my $pbs_line (<PBS>){
-    if ($pbs_line =~ /#PBS -N (.*)$/){
-        $job_name = $1;
-    }
-}
-close(PBS);
+def run_pbs_script(pbs_script, job_id, options):
+    retcode = 1
+    if not os.environ.has_key('LPBS_HOME'):
+        return retcode
+    try:
 
-# Get the last job ID from the tracker
-my $tracker = $ENV{'HOME'}.'/.local_runs';
-open(TRACKER, $tracker) or die ("Couldn't open $tracker\n");
-my $last_job_id = <TRACKER>;
-if (defined($last_job_id) and $last_job_id =~ /\d+/){ 
-    chomp($last_job_id);
-} else {
-    $last_job_id = 0;
-}
-close TRACKER;
+        sequence_number = job_id[0:job_id.index('.')]
 
-# Fork and execute
-my $new_job_id = $last_job_id + 1;
-my $full_job_id = "$new_job_id.$hostname.physik.fu-berlin.de";
-my $new_pid = fork();
-if (not defined $new_pid) {
-    # couldn't fork
-    print "Resources not available.\n";
-} elsif ($new_pid == 0) {
-    # child process
-    my $pwd = `pwd`;
-    chomp($pwd);
-    if ( -d $scratch_folder){
-        mkdir("$scratch_folder/$full_job_id");
-    } else {
-        die("$scratch_folder does not exist\n");
-    }
-    my $code = system("PBS_O_WORKDIR=$pwd PBS_JOBID=$full_job_id bash $pbs 2>$job_name.o$new_job_id.local");
-    if ($to_address ne ''){
-        open(EMAIL, "|mail.pl --messageid=$message_id --from=$from_address --to=$to_address --subject=\"PBS JOB $full_job_id\" > /dev/null") or die ("Couldn't send email\n");
-        print EMAIL "PBS Job Id: $full_job_id\n";
-        print EMAIL "Job Name:   $job_name\n";
-        print EMAIL "Execution terminated\n";
-        print EMAIL "Exit_status=$code\n";
-        print EMAIL "\nDue to exit status, $scratch_folder/$full_job_id was not deleted\n";
-        close(EMAIL);
-    }
-    if ($code == 0){                                                            
-        system("rm -rf $scratch_folder/$full_job_id");                          
-    }
-    exit(0);
-} else {
-    # parent process
-    open(NEWTRACKER, ">$tracker.tmp") or die ("Couldn't open $tracker\n");
-    open(TRACKER, $tracker) or die ("Couldn't open $tracker\n");
-    print NEWTRACKER "$new_job_id\n";
-    $last_job_id = <TRACKER>;
-    # clean up tracker, add self
-    foreach my $line (<TRACKER>){
-        chomp($line);
-        if ($line =~ m'^([0-9]+) (.+) ([0-9]+) ([0-9]+)$'){
-            my $job_id = $1;
-            my $job_name = $2;
-            my $pid = $3;
-            my $start_time = $4;
-            my $process = `ps -p $pid | grep $pid`;
-        } else {
-            print "line = '".$line."'\n";
-            die("Unexpected format in $tracker\n");
-        }
-    }
-    my $time_stamp = time();
-    print NEWTRACKER "$new_job_id $job_name $new_pid $time_stamp\n";
-    close TRACKER;
-    close NEWTRACKER;
-    system("mv $tracker.tmp $tracker");
-    if ($to_address ne ''){
-        open(EMAIL, "|mail.pl --replyto=$message_id --from=$from_address --to=$to_address --subject=\"PBS JOB $full_job_id\" > /dev/null") or die ("Couldn't send email\n");
-        print EMAIL "PBS Job Id: $full_job_id\n";
-        print EMAIL "Job Name:   $job_name\n";
-        print EMAIL "Begun execution\n";
-        close(EMAIL);
-    }
-    print "$full_job_id\n";
-    exit(0);
-}
+        # create the scratch folder
+        job_scratch = full_expand(os.path.join(
+                      options.config.get('Scratch', 'scratch_root'), job_id))
+        if (options.config.getboolean('Scratch', 'create_jobid_folder')):
+            os.mkdir(job_scratch)
 
+        # set environment
+        job_name = 'JOBNAME'
+        if options.job_name is not None:
+            job_name = options.job_name
+        pbs_env = os.environ
+        for env_var in ['HOME', 'LANG', 'LOGNAME', 'PATH', 'MAIL', 'SHELL', 
+        'TZ']:
+            if os.environ.has_key(env_var):
+                pbs_env["PBS_O_%s" % env_var] = os.environ[env_var]
+        pbs_env['PBS_O_HOST'] = options.config.get('Node','hostname') + "." \
+                                + options.config.get('Node','domain')
+        pbs_env['PBS_SERVER'] = options.config.get('Server','hostname') + "." \
+                                + options.config.get('Server','domain')
+        pbs_env['PBS_O_QUEUE'] = ''
+        pbs_env['PBS_O_WORKDIR'] = os.getcwd()
+        pbs_env['PBS_ENVIRONMENT'] = 'PBS_BATCH'
+        pbs_env['PBS_JOBID'] = job_id
+        pbs_env['PBS_JOBNAME'] = job_name
+        pbs_env['PBS_NODEFILE'] = os.path.join(os.environ['LPBS_HOME'], 
+                                               'nodefile')
+        pbs_env['PBS_QUEUE'] = ''
+        nodefile_fh = open(pbs_env['PBS_NODEFILE'], 'w')
+        nodefile_fh.write(pbs_env['PBS_O_HOST']+"\n")
+        nodefile_fh.close()
+
+        # redirect I/O
+        os.setsid()
+        stdout_file = "%s.o%s" %(job_name, sequence_number)
+        stderr_file = "%s.e%s" %(job_name, sequence_number)
+        devnull = open(os.devnull)
+        os.dup2(devnull.fileno(), sys.stdin.fileno())
+        if options.stdout_file is not None:
+            stdout_file = options.stdout_file
+        if options.stderr_file is not None:
+            stderr_file = options.stderr_file
+        if options.oe_join == 'oe':
+            stdout_fh = open(stdout_file, 'w')
+            os.dup2(stdout_fh.fileno(), sys.stdout.fileno())
+            os.dup2(stdout_fh.fileno(), sys.stderr.fileno())
+        elif options.oe_join == 'eo':
+            stderr_fh = open(stderr_file, 'w')
+            os.dup2(stderr_fh.fileno(), sys.stdout.fileno())
+            os.dup2(stdout_fh.fileno(), sys.stderr.fileno())
+        else:
+            stdout_fh = open(stdout_file, 'w')
+            stderr_fh = open(stderr_file, 'w')
+            os.dup2(stdout_fh.fileno(), sys.stdout.fileno())
+            os.dup2(stderr_fh.fileno(), sys.stderr.fileno())
+
+        # pass control to shell, wait for completion
+        p = subprocess.Popen("./%s" % pbs_script, shell=True,
+                             executable='/bin/bash', env=pbs_env)
+        set_lock(job_id, p.pid)
+        message  = "PBS Job ID: %s\n" % job_id
+        message += "Job Name: %s\n" % job_name
+        message += "Begun execution\n"
+        notify("Begun execution", job_id, message, options)
+        log("Submitted job %s" % job_id, options)
+        retcode = p.wait()
+        release_lock(job_id)
+
+        # close I/O
+        if options.oe_join == 'oe':
+            stdout_fh.close()
+        elif options.oe_join == 'eo':
+            stderr_fh.close()
+        else:
+            stdout_fh.close()
+            stderr_fh.close()
+        devnull.close()
+
+        # notify about end of process
+        message  = "PBS Job ID: %s\n" % job_id
+        message += "Job Name: %s\n" % job_name
+        message += "Execution Terminated\n"
+        message += "Exit Status = %s\n" % retcode
+        notify("Execution Terminated", job_id, message, options)
+        log("Finished job %s with status %s" % (job_id, retcode), options)
+
+        # remove scratch folder
+        if os.path.isdir(job_scratch):
+            if not options.config.getboolean('Scratch', 'keep_scratch'):
+                if ( (retcode == 0) or (options.config.getboolean('Scratch', 
+                'delete_failed_scratch')) ):
+                    shutil.rmtree(job_scratch, ignore_errors=True)
+
+    except OSError, e:
+        message  = "PBS Job ID: %s\n" % job_id
+        message += "Job Name: %s\n" % job_name
+        message += "Execution Failed \n"
+        message += "%s" % e
+        notify("Execution Failed", job_id, message, options)
+        log("Failed to submit job %s" % job_id, options)
+
+    return retcode
+
+
+
+def submit_pbs_script(pbs_script, options):
+    """ Submit the given PBS script """
+    if os.path.isfile(pbs_script) and os.access(pbs_script, os.X_OK):
+        job_id = get_new_job_id(options)
+        if job_id is None:
+            print >>sys.stderr, "Could not get new job ID"
+            return 1
+        newpid = os.fork()
+        if newpid == 0:
+            # Child process
+            return run_pbs_script(pbs_script, job_id, options)
+        else:
+            # Parent process
+            if not options.do_not_print_id:
+                print job_id
+            return 0
+    else:
+        print >>sys.stderr, "'%s' must be an executable script" % pbs_script
+        return 1
+
+
+
+def main(argv=None):
+    """ Main Program """
+    if argv is None:
+        argv = sys.argv
+    arg_parser = OptionParser(
+    usage = "",
+    description = __doc__)
+    arg_parser.add_option(
+      '-a', action='store', dest='exec_date_time', metavar="DATE_TIME",
+      help="(ignored)")
+    arg_parser.add_option(
+      '-A', action='store', dest='account_strint', metavar="ACCOUNT_STRING",
+      help="(ignored)")
+    arg_parser.add_option(
+      '-b', action='store', dest='wait_seconds', metavar="SECONDS",
+      help="(ignored)")
+    arg_parser.add_option(
+      '-c', action='store', dest='checkpoint_options',
+      metavar="CHECKPOINT_OPTS", help="(ignored)")
+    arg_parser.add_option(
+      '-C', action='store', dest='directive_prefix', metavar="DIRECTIVE_PREFIX",
+      help="(ignored)")
+    arg_parser.add_option(
+      '-e', action='store', dest='stderr_file', metavar="PATH",
+      help="Defines the path to be used for the standard error stream of "
+      "the batch job. If the -e option is not specified, the default "
+      "file name for the standard error stream will be used. The "
+      "default name has the following form: "
+      "job_name.esequence_number")
+    arg_parser.add_option(
+      '-j', action='store', dest='oe_join', metavar="JOIN",
+      help="Declares if the standard error stream of the job will be "
+      "merged with the standard output stream of the job.  An option "
+      "argument value of 'oe' directs that the two streams will be "
+      "merged, intermixed, as standard output. An option argument value "
+      "of 'eo' directs that the two streams will be merged, intermixed, "
+      "as standard error.  If the join argument is n or the option is "
+      "not specified, the two streams will be two separate files.")
+    arg_parser.add_option(
+      '-l', action='append', dest='resource_list', metavar="RESOURCE_LIST",
+      help="(ignored)")
+    arg_parser.add_option(
+      '-o', action='store', dest='stdout_file', metavar="PATH",
+      help="Defines the path to be used for the standard output stream of "
+      "the batch job. If the -o option is not specified, the default "
+      "file name for the standard output stream will be used. The "
+      "default name has the following form: "
+      "job_name.osequence_number")
+    arg_parser.add_option(
+      '-z', action='store_true', dest='do_not_print_id',
+      default=False, help="Directs that the lqsub command is not to write the "
+      "job identifier assigned to the job to the commands standard output.")
+    arg_parser.add_option(
+      '-N', action='store', dest='job_name', help="Declares a name for the "
+      "job. The name specified may be up to and including 15 characters in "
+      "length. It must consist of printable, non white space characters with "
+      "the first character alphabetic. If the -N option is not specified, the "
+      "job name will be the base name of the job script file specified on the "
+      "command line. If no script file name was specified and the script was "
+      "read from the standard input, then the job name will be set to STDIN.")
+    arg_parser.add_option(
+      '--config', action='store', dest='config', help="Config file to "
+      "use. Defaults to LPBS_HOME/lpbs.cfg")
+    options, args = arg_parser.parse_args(argv)
+    verify_lpbs_home()
+    options.config = get_config(options.config)
+    if options.config is None:
+        return 1
+    if (len(args) < 2):
+        print >>sys.stderr, "You must supply a pbs script"
+        return 1
+    pbs_script = args[1]
+    set_options_from_pbs_script(arg_parser, options, pbs_script)
+    return submit_pbs_script(pbs_script, options)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
 
