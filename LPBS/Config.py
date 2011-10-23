@@ -48,15 +48,18 @@ keep_scratch: 0
 delete_failed_scratch: 0
 
 [Notification]
-send_mail: 0
+send_mail: 1
 local_growl: 1
 remote_growl: 0
 write_to_log: 0
 write_to_mbox: 0
 
 [Mail]
-to: nobody@example.org
-smtp: localhost
+from: nobody@example.org
+smtp: smtp.example.com:587
+username: user
+password: secret
+tls: 1
 
 [Growl]
 sticky: 1

@@ -21,17 +21,26 @@
 
 import shlex
 import email
+import smtplib
 import subprocess
 import os
 from Config import full_expand
 
 """ Notifications and Logging """
 
-def notify(subject, job_id, message, options):
+JOB_MESSAGE_ID = {}
+
+def notify(subject, job_id, message, options, category=''):
     """ Send notification
     """
     if options.config.getboolean("Notification", 'local_growl'):
         notify_local_growl(subject, job_id, message, options)
+    if options.config.getboolean("Notification", 'send_mail'):
+        if category in options.mail_options:
+            for entry in options.email_addresses:
+                for address in entry.split(","):
+                    notify_email(address.strip(), subject, job_id, message,
+                                 options)
 
 
 def notify_local_growl(subject, job_id, message, options):
@@ -42,6 +51,35 @@ def notify_local_growl(subject, job_id, message, options):
                           stdin=subprocess.PIPE).stdin
     p.write(message)
     p.close()
+
+
+def notify_email(recipient, subject, job_id, message, options):
+
+    msg = email.Message.Message()
+    fromaddr = options.config.get("Mail", 'from')
+    smpt_server = options.config.get("Mail", 'smtp')
+
+    username = options.config.get('Mail', 'username')
+    password = options.config.get('Mail', 'password')
+
+    message_id = email.utils.make_msgid('lpbs')
+    if not JOB_MESSAGE_ID.has_key(job_id):
+        JOB_MESSAGE_ID[job_id] = message_id
+    msg.add_header("Subject", "LPBS JOB %s" % job_id)
+    msg.add_header("Message-Id", message_id)
+    msg.add_header("From", fromaddr)
+    msg.add_header("To", recipient)
+    if (JOB_MESSAGE_ID.has_key(job_id)):
+        msg.add_header("In-Reply-To:", JOB_MESSAGE_ID[job_id])
+    msg.add_header("References:", JOB_MESSAGE_ID[job_id])
+    msg.set_charset("UTF-8")
+    msg.set_payload(message, charset="UTF-8")
+
+    server = smtplib.SMTP(smpt_server)
+    server.starttls()
+    server.login(username,password)
+    server.sendmail(fromaddr, recipient, msg.as_string())
+    server.quit()
 
 
 def log(message, options):

@@ -214,6 +214,21 @@ def main(argv=None):
       '-l', action='append', dest='resource_list', metavar="RESOURCE_LIST",
       help="(ignored)")
     arg_parser.add_option(
+      '-m', action='store', dest='mail_options',
+      default='n', help="Defines the set of conditions under which the "
+      "execution server will send a mail message about the job. The "
+      "mail_options argument is a string which consists of either the "
+      "single character 'n', or one or more of the characters 'a', 'b', "
+      "and 'e'. If the character 'n' is specified (default), no normal "
+      "mail is sent. If 'a' present, mail is "
+      "sent when the job is aborted by the batch system; if 'b' "
+      "present, mail is sent when the job begins execution; if 'e' "
+      "present, mail is sent when the job terminates.")
+    arg_parser.add_option(
+      '-M', action='append', dest='email_addresses',
+      help="Email address to which messages are send. Option can be given "
+      "multiple times")
+    arg_parser.add_option(
       '-o', action='store', dest='stdout_file', metavar="PATH",
       help="Defines the path to be used for the standard output stream of "
       "the batch job. If the -o option is not specified, the default "
