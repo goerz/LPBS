@@ -63,15 +63,13 @@ def notify_email(recipient, subject, job_id, message, options):
     password = options.config.get('Mail', 'password')
 
     message_id = email.utils.make_msgid('lpbs')
-    if not JOB_MESSAGE_ID.has_key(job_id):
-        JOB_MESSAGE_ID[job_id] = message_id
     msg.add_header("Subject", "LPBS JOB %s" % job_id)
     msg.add_header("Message-Id", message_id)
     msg.add_header("From", fromaddr)
     msg.add_header("To", recipient)
     if (JOB_MESSAGE_ID.has_key(job_id)):
         msg.add_header("In-Reply-To:", JOB_MESSAGE_ID[job_id])
-    msg.add_header("References:", JOB_MESSAGE_ID[job_id])
+        msg.add_header("References:", JOB_MESSAGE_ID[job_id])
     msg.set_charset("UTF-8")
     msg.set_payload(message, charset="UTF-8")
 
@@ -80,6 +78,9 @@ def notify_email(recipient, subject, job_id, message, options):
     server.login(username,password)
     server.sendmail(fromaddr, recipient, msg.as_string())
     server.quit()
+
+    if not JOB_MESSAGE_ID.has_key(job_id):
+        JOB_MESSAGE_ID[job_id] = message_id
 
 
 def log(message, options):
