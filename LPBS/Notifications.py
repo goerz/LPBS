@@ -24,7 +24,7 @@ import email
 import smtplib
 import subprocess
 import os
-from Config import full_expand
+from LPBS.Config import full_expand
 
 """ Notifications and Logging """
 
