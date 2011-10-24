@@ -59,6 +59,7 @@ from: nobody@example.org
 smtp: smtp.example.com:587
 username: user
 password: secret
+authenticate: 0
 tls: 1
 
 [Growl]

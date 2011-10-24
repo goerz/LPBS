@@ -44,6 +44,7 @@ def run_pbs_script(pbs_script, job_id, options):
         return retcode
     try:
 
+        job_name = 'n/a'
         sequence_number = job_id[0:job_id.index('.')]
 
         # create the scratch folder
@@ -53,7 +54,6 @@ def run_pbs_script(pbs_script, job_id, options):
             os.mkdir(job_scratch)
 
         # set environment
-        job_name = 'JOBNAME'
         if options.job_name is not None:
             job_name = options.job_name
         pbs_env = os.environ
@@ -251,7 +251,8 @@ def main(argv=None):
       '--config', action='store', dest='config', help="Config file to "
       "use. Defaults to LPBS_HOME/lpbs.cfg")
     options, args = arg_parser.parse_args(argv)
-    verify_lpbs_home()
+    if (verify_lpbs_home() != 0):
+        return 1
     options.config = get_config(options.config)
     if options.config is None:
         return 1

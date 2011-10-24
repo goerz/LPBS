@@ -59,9 +59,6 @@ def notify_email(recipient, subject, job_id, message, options):
     fromaddr = options.config.get("Mail", 'from')
     smpt_server = options.config.get("Mail", 'smtp')
 
-    username = options.config.get('Mail', 'username')
-    password = options.config.get('Mail', 'password')
-
     message_id = email.utils.make_msgid('lpbs')
     msg.add_header("Subject", "LPBS JOB %s" % job_id)
     msg.add_header("Message-Id", message_id)
@@ -74,8 +71,12 @@ def notify_email(recipient, subject, job_id, message, options):
     msg.set_payload(message, charset="UTF-8")
 
     server = smtplib.SMTP(smpt_server)
-    server.starttls()
-    server.login(username,password)
+    if (options.config.getboolean("Mail", 'tls')):
+        server.starttls()
+    if (options.config.getboolean("Mail", 'authenticate')):
+        username = options.config.get('Mail', 'username')
+        password = options.config.get('Mail', 'password')
+        server.login(username,password)
     server.sendmail(fromaddr, recipient, msg.as_string())
     server.quit()
 
