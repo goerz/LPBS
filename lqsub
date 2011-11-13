@@ -81,47 +81,55 @@ def run_pbs_script(pbs_script, job_id, options):
         nodefile_fh.close()
 
         # redirect I/O
-        os.setsid()
-        stdout_file = "%s.o%s" % (job_name, sequence_number)
-        stderr_file = "%s.e%s" % (job_name, sequence_number)
-        devnull = open(os.devnull)
-        os.dup2(devnull.fileno(), sys.stdin.fileno())
-        if options.stdout_file is not None:
-            stdout_file = options.stdout_file
-        if options.stderr_file is not None:
-            stderr_file = options.stderr_file
-        if options.oe_join == 'oe':
-            stdout_fh = open(stdout_file, 'w')
-            os.dup2(stdout_fh.fileno(), sys.stdout.fileno())
-            os.dup2(stdout_fh.fileno(), sys.stderr.fileno())
-        elif options.oe_join == 'eo':
-            stderr_fh = open(stderr_file, 'w')
-            os.dup2(stderr_fh.fileno(), sys.stdout.fileno())
-            os.dup2(stdout_fh.fileno(), sys.stderr.fileno())
-        else:
-            stdout_fh = open(stdout_file, 'w')
-            stderr_fh = open(stderr_file, 'w')
-            os.dup2(stdout_fh.fileno(), sys.stdout.fileno())
-            os.dup2(stderr_fh.fileno(), sys.stderr.fileno())
+        if not options.interactive:
+            os.setsid()
+            stdout_file = "%s.o%s" % (job_name, sequence_number)
+            stderr_file = "%s.e%s" % (job_name, sequence_number)
+            devnull = open(os.devnull)
+            os.dup2(devnull.fileno(), sys.stdin.fileno())
+            if options.stdout_file is not None:
+                stdout_file = options.stdout_file
+            if options.stderr_file is not None:
+                stderr_file = options.stderr_file
+            if options.oe_join == 'oe':
+                stdout_fh = open(stdout_file, 'w')
+                os.dup2(stdout_fh.fileno(), sys.stdout.fileno())
+                os.dup2(stdout_fh.fileno(), sys.stderr.fileno())
+            elif options.oe_join == 'eo':
+                stderr_fh = open(stderr_file, 'w')
+                os.dup2(stderr_fh.fileno(), sys.stdout.fileno())
+                os.dup2(stdout_fh.fileno(), sys.stderr.fileno())
+            else:
+                stdout_fh = open(stdout_file, 'w')
+                stderr_fh = open(stderr_file, 'w')
+                os.dup2(stdout_fh.fileno(), sys.stdout.fileno())
+                os.dup2(stderr_fh.fileno(), sys.stderr.fileno())
 
         # pass control to shell, wait for completion
-        process = subprocess.Popen("./%s" % pbs_script, shell=True,
-                             executable='/bin/bash', env=pbs_env)
-        set_lock(job_id, process.pid)
-        notifier.notify(COND_STRT)
-        logging.info("Submitted job %s" % job_id)
-        retcode = process.wait()
-        release_lock(job_id)
+        if options.interactive:
+            notifier.notify(COND_STRT)
+            logging.info("Started interactive job %s" % job_id)
+            retcode = subprocess.call("./%s" % pbs_script, shell=True,
+                                      executable='/bin/bash', env=pbs_env)
+        else:
+            set_lock(job_id, process.pid)
+            process = subprocess.Popen("./%s" % pbs_script, shell=True,
+                                       executable='/bin/bash', env=pbs_env)
+            notifier.notify(COND_STRT)
+            logging.info("Submitted job %s" % job_id)
+            retcode = process.wait()
+            release_lock(job_id)
 
         # close I/O
-        if options.oe_join == 'oe':
-            stdout_fh.close()
-        elif options.oe_join == 'eo':
-            stderr_fh.close()
-        else:
-            stdout_fh.close()
-            stderr_fh.close()
-        devnull.close()
+        if not options.interactive:
+            if options.oe_join == 'oe':
+                stdout_fh.close()
+            elif options.oe_join == 'eo':
+                stderr_fh.close()
+            else:
+                stdout_fh.close()
+                stderr_fh.close()
+            devnull.close()
 
         # notify about end of process
         notifier.job_retcode = retcode
@@ -152,19 +160,24 @@ def submit_pbs_script(pbs_script, options):
         if job_id is None:
             print >> sys.stderr, "Could not get new job ID"
             return 1
-        newpid = os.fork()
-        if newpid == 0:
-            # Child process
+        if options.interactive:
             retcode = run_pbs_script(pbs_script, job_id, options)
-            logging.debug("Returning child process with code %s" % retcode)
+            logging.debug("Returning process with code %s" % retcode)
             return retcode
         else:
-            # Parent process
-            if not options.do_not_print_id:
-                print job_id
-            retcode = 0
-            logging.debug("Returning parent process with code %s" % retcode)
-            return retcode
+            newpid = os.fork()
+            if newpid == 0:
+                # Child process
+                retcode = run_pbs_script(pbs_script, job_id, options)
+                logging.debug("Returning child process with code %s" % retcode)
+                return retcode
+            else:
+                # Parent process
+                if not options.do_not_print_id:
+                    print job_id
+                retcode = 0
+                logging.debug("Returning parent process with code %s" % retcode)
+                return retcode
     else:
         print >> sys.stderr, "'%s' must be an executable script" % pbs_script
         logging.critical("'%s'is not an executable script" % pbs_script)
@@ -206,6 +219,11 @@ def main(argv=None):
       "file name for the standard error stream will be used. The "
       "default name has the following form: "
       "job_name.esequence_number")
+    arg_parser.add_option(
+      '-I', action='store_true', dest='interactive',
+      help="Declares that the job is to be run \"interactively\". The standard"
+      "input, output, and error streams of the job are connected through lqsub"
+      "to the terminal session in which lqsub is running")
     arg_parser.add_option(
       '-j', action='store', dest='oe_join', metavar="JOIN",
       help="Declares if the standard error stream of the job will be "
