@@ -20,6 +20,7 @@
 ############################################################################
 
 import shlex
+import logging
 
 """ Work with PBS script files """
 
@@ -30,10 +31,11 @@ def set_options_from_pbs_script(arg_parser, options, pbs_script):
     pbs_fh = open(pbs_script)
     for line in pbs_fh:
         if line.startswith('#!'): continue
-        if line == (''): continue
+        if line.strip() == (''): continue
         if not line.startswith('#PBS '): break
         opt_string += line.replace('#PBS', '', 1)
     pbs_fh.close()
+    logging.debug("opt_string extracted from PBS file:\n%s" % opt_string)
     argv = shlex.split(opt_string)
     options, args = arg_parser.parse_args(argv, options)
 

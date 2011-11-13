@@ -47,7 +47,7 @@ def run_pbs_script(pbs_script, job_id, options):
         return retcode
     try:
 
-        job_name = 'n/a'
+        job_name = 'job'
         sequence_number = job_id[0:job_id.index('.')]
 
         # create the scratch folder
@@ -148,6 +148,7 @@ def submit_pbs_script(pbs_script, options):
     logging.debug("Submitting PBS script %s" % pbs_script)
     if os.path.isfile(pbs_script) and os.access(pbs_script, os.X_OK):
         job_id = get_new_job_id(options)
+        logging.debug("assigning Job ID %s" % job_id)
         if job_id is None:
             print >> sys.stderr, "Could not get new job ID"
             return 1
@@ -252,6 +253,7 @@ def main(argv=None):
     options.config.get('LPBS', 'logfile')),
     format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %H:%M:%S %z',
     level=logging.INFO)
+    logging.info("##### New Job Submission ####")
     if options.config is None:
         return 1
     if (len(args) < 2):
