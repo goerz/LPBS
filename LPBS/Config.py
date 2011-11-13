@@ -19,13 +19,13 @@
 #    59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ############################################################################
 
+""" Manage Configuration """
+
 from ConfigParser import SafeConfigParser
 import os
 import sys
-import socket
 from StringIO import StringIO
 
-""" Manage Configuration """
 
 DEFAULTS = StringIO("""\
 [Server]
@@ -50,8 +50,6 @@ delete_failed_scratch: 0
 [Notification]
 send_mail: 1
 send_growl: 0
-write_to_log: 0
-write_to_mbox: 0
 
 [Mail]
 from: nobody@example.org
@@ -63,12 +61,10 @@ tls: 1
 
 [Growl]
 sticky: 1
-growlnotify: growlnotify
 hostname: localhost:23053
 password: secret
 
 [Log]
-notification_log: notification.log
 logfile: lpbs.log
 """)
 
@@ -76,22 +72,30 @@ def get_config(config_file):
     """ Return an instance of ConfigParser.SafeConfigParser, loaded with the
         data in
         a) $LPBS_HOME/lpbs.cfg
-        b) the specified config_file
+        b) $HOME/.lpbs.cfg
+        c) the specified config_file
     """
     config = SafeConfigParser()
+    # Defaults
     config.readfp(DEFAULTS)
-    if config_file is None:
-        if os.environ.has_key('LPBS_HOME'):
-            config_file = os.path.join(os.environ['LPBS_HOME'], 'lpbs.cfg')
-        else:
-            print >>sys.stderr, "LPBS_HOME is not defined"
+    config_files = []
+    # $LPBS_HOME/lpbs.cfg
+    if os.environ.has_key('LPBS_HOME'):
+        global_config_file = os.path.join(os.environ['LPBS_HOME'], 'lpbs.cfg')
+        if os.path.isfile(global_config_file):
+            config_files.append(global_config_file)
+    # $HOME/.lpbs.cfg
+    if os.environ.has_key('HOME'):
+        user_config_file = os.path.join(os.environ['HOME'], '.lpbs.cfg')
+        if os.path.isfile(user_config_file):
+            config_files.append(user_config_file)
+    # Specified Config File
     try:
         if os.path.isfile(config_file):
-            config.read(config_file)
-        else:
-            print >>sys.stderr, "%s does not exist" % config_file
+            config_files.append(config_file)
     except TypeError:
-        print >>sys.stderr, "Cannot read config file, using default values"
+        pass
+    config.read(config_files)
     return config
 
 
@@ -100,13 +104,13 @@ def verify_lpbs_home():
         necessary
     """
     if not os.environ.has_key('LPBS_HOME'):
-        print >>sys.stderr, "LPBS_HOME must be defined"
+        print >> sys.stderr, "LPBS_HOME must be defined"
         return 1
     if not os.path.isdir(os.environ['LPBS_HOME']):
-        print >>sys.stderr, "LPBS_HOME must be a directory"
+        print >> sys.stderr, "LPBS_HOME must be a directory"
         return 1
     if not os.access(os.environ['LPBS_HOME'], os.W_OK):
-        print >>sys.stderr, "LPBS_HOME must be writable"
+        print >> sys.stderr, "LPBS_HOME must be writable"
         return 1
     configfile = os.path.join(os.environ['LPBS_HOME'], 'lpbs.cfg')
     if not os.path.isfile(configfile):

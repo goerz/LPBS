@@ -102,7 +102,7 @@ class Notifier:
                 # Construct growl_notifiers
                 if gntp_notifier is None:
                     logging.error("gntp module not availalble. Will not send "
-                    "growl notifications", options)
+                    "growl notifications")
                 else:
                     for i, hostname in enumerate(self.growl['hostnames']):
                         hostname, port = hostname.split(":", 2)

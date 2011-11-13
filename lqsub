@@ -137,7 +137,7 @@ def run_pbs_script(pbs_script, job_id, options):
 
     except OSError, error:
         notifier.notify(COND_ABER, message="%s"%error)
-        logging.error("Failed to submit job %s" % job_id)
+        logging.error("Failed to submit job %s: %s" % (job_id, error))
 
     return retcode
 
@@ -157,7 +157,7 @@ def submit_pbs_script(pbs_script, options):
             # Child process
             retcode = run_pbs_script(pbs_script, job_id, options)
             logging.debug("Returning child process with code %s" % retcode)
-            return recode
+            return retcode
         else:
             # Parent process
             if not options.do_not_print_id:
@@ -251,7 +251,7 @@ def main(argv=None):
       "read from the standard input, then the job name will be set to STDIN.")
     arg_parser.add_option(
       '--config', action='store', dest='config', help="Config file to "
-      "use. Defaults to LPBS_HOME/lpbs.cfg")
+      "use, on top of $LPBS_HOME/lpbs.cfg and $HOME/.lpbs.cfg")
     options, args = arg_parser.parse_args(argv)
     if (verify_lpbs_home() != 0):
         return 1
