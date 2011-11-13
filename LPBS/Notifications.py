@@ -26,6 +26,7 @@ import smtplib
 import socket
 import logging
 try:
+    import gntp
     import gntp.notifier as gntp_notifier
 except ImportError:
     gntp_notifier = None
@@ -120,7 +121,9 @@ class Notifier:
 
 
     def notify(self, condition, message=None):
-        """ Send notification
+        """ Send notification for the given condition COND_STRT, COND_STOP,
+            COND_ABRT, or COND_ABER. If message is given, it is appended to the
+            auto-generated notification text
         """
         logging.debug("Sending notification for condition %i" % condition)
         if self.notifications['mail']:
@@ -156,7 +159,8 @@ class Notifier:
 
     def _get_notify_description(self, condition, message=None):
         """ Return the description text for the notification in the given
-        condition. If message is given, append it to the description """
+            condition. If message is given, it is appended to the description
+        """
         description  = "PBS Job ID: %s\n" % self.job_id
         description += "Job Name: %s\n" % self.job_name
         if condition == COND_STRT:
@@ -189,20 +193,27 @@ class Notifier:
         password = password)
         try:
             growl_notifier.register()
-        except socket.error:
+        except socket.error, error:
             logging.warn("Can't connect to growl on %s"
                             % growl_notifier.hostname)
+            logging.debug("%s" % error)
             if not force:
                 return None
+        except gntp.BaseError, error:
+            logging.warn("GNTP Exception")
+            logging.debug("%s" % error)
+            return None
         return growl_notifier
 
 
 
     def notify_email(self, condition, message=None):
         """ Notify by email """
-        logging.debug("Sending email notification for condition %i" % condition)
         if not self.mail['mail_conditions'][condition-1]:
+            logging.debug("Skipping email notification for condition"
+                          % condition)
             return
+        logging.debug("Sending email notification for condition %i" % condition)
         for recipient in self.mail['recipients']:
             logging.debug("Sending email to %s" % recipient)
             msg = email.Message.Message()
@@ -223,12 +234,23 @@ class Notifier:
             description = self._get_notify_description(condition, message)
             msg.set_payload(description, charset="UTF-8")
 
-            server = smtplib.SMTP(smpt_server)
-            if self.mail['use_tls']:
-                server.starttls()
-            if self.mail['authenticate']:
-                username = self.mail['username']
-                password = self.mail['password']
-                server.login(username, password)
-            server.sendmail(fromaddr, recipient, msg.as_string())
-            server.quit()
+            try:
+                server = smtplib.SMTP(smpt_server)
+                if self.mail['use_tls']:
+                    server.starttls()
+                if self.mail['authenticate']:
+                    username = self.mail['username']
+                    password = self.mail['password']
+                    server.login(username, password)
+                server.sendmail(fromaddr, recipient, msg.as_string())
+                server.quit()
+            except socket.error, error:
+                logging.warn("Can't connect to smtp server")
+                logging.debug("%s" % error)
+            except smtplib.SMTPAuthenticationError, error:
+                logging.warn("SMTP Authentication Error")
+                logging.debug("%s" % error)
+            except smtplib.SMTPException, error:
+                logging.warn("SMTP Exception")
+                logging.debug("%s" % error)
+

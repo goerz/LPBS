@@ -155,15 +155,22 @@ def submit_pbs_script(pbs_script, options):
         newpid = os.fork()
         if newpid == 0:
             # Child process
-            return run_pbs_script(pbs_script, job_id, options)
+            retcode = run_pbs_script(pbs_script, job_id, options)
+            logging.debug("Returning child process with code %s" % retcode)
+            return recode
         else:
             # Parent process
             if not options.do_not_print_id:
                 print job_id
-            return 0
+            retcode = 0
+            logging.debug("Returning parent process with code %s" % retcode)
+            return retcode
     else:
         print >> sys.stderr, "'%s' must be an executable script" % pbs_script
-        return 1
+        logging.critical("'%s'is not an executable script" % pbs_script)
+        retcode = 0
+        logging.debug("Returning process with code %s" % retcode)
+        return retcode
 
 
 
