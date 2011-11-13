@@ -197,6 +197,9 @@ def main(argv=None):
       '-C', action='store', dest='directive_prefix', metavar="DIRECTIVE_PREFIX",
       help="(ignored)")
     arg_parser.add_option(
+      '--debug', action='store_true', dest='debug',
+      default=False, help="Set logging to debug level")
+    arg_parser.add_option(
       '-e', action='store', dest='stderr_file', metavar="PATH",
       help="Defines the path to be used for the standard error stream of "
       "the batch job. If the -e option is not specified, the default "
@@ -256,10 +259,16 @@ def main(argv=None):
     if (verify_lpbs_home() != 0):
         return 1
     options.config = get_config(options.config)
-    logging.basicConfig(filename=os.path.join(os.environ['LPBS_HOME'],
-    options.config.get('LPBS', 'logfile')),
-    format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %H:%M:%S %z',
-    level=logging.INFO)
+    if options.debug:
+        logging.basicConfig(filename=os.path.join(os.environ['LPBS_HOME'],
+        options.config.get('LPBS', 'logfile')),
+        format='%(asctime)s %(funcName)s-%(levelname)s: %(message)s',
+        datefmt='%m/%d/%Y %H:%M:%S %z', level=logging.DEBUG)
+    else:
+        logging.basicConfig(filename=os.path.join(os.environ['LPBS_HOME'],
+        options.config.get('LPBS', 'logfile')),
+        format='%(asctime)s: %(message)s', datefmt='%m/%d/%Y %H:%M:%S %z',
+        level=logging.INFO)
     logging.info("##### New Job Submission ####")
     if options.config is None:
         return 1
