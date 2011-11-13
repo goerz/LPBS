@@ -90,10 +90,10 @@ class Notifier:
                 = options.config.getboolean("Growl", 'sticky')
                 for hostname in \
                 options.config.get("Growl", "hostname").split(","):
-                    self.growl['hostnames'].append(hostname)
+                    self.growl['hostnames'].append(hostname.strip())
                 for password in \
                 options.config.get("Growl", "password").split(","):
-                    self.growl['passwords'].append(password)
+                    self.growl['passwords'].append(password.strip())
                 # If there are less passwords given than hostnames, assume that
                 # the last password is valid for all remaining hostnames
                 while ( len(self.growl['passwords'])
@@ -109,7 +109,7 @@ class Notifier:
                         try:
                             port = int(port)
                         except ValueError:
-                            growl.debug("Can't parse port '%s'" % port)
+                            logging.debug("Can't parse port '%s'" % port)
                             port = 23053
                         password = self.growl['passwords'][i]
                         if password == '':
@@ -188,9 +188,9 @@ class Notifier:
         applicationName = "LPBS",
         notifications = self.growl_types,
         defaultNotifications = ["Job Started"],
-        hostname = hostname,
+        hostname = hostname.strip(),
         port=port,
-        password = password)
+        password = password.strip())
         try:
             growl_notifier.register()
         except socket.error, error:
