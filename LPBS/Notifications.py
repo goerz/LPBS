@@ -183,7 +183,7 @@ class Notifier:
             None unless force is True, in which case the unregistered
             GrowlNotifier is returned
         """
-        logging.debug("Registering with growl on %s" % hostname)
+        logging.debug("Registering with growl on %s:%s" % (hostname, port))
         growl_notifier = gntp_notifier.GrowlNotifier(
         applicationName = "LPBS",
         notifications = self.growl_types,
@@ -194,8 +194,8 @@ class Notifier:
         try:
             growl_notifier.register()
         except socket.error, error:
-            logging.warn("Can't connect to growl on %s"
-                            % growl_notifier.hostname)
+            logging.warn("Can't connect to growl on %s:%s"
+                          % (growl_notifier.hostname, port))
             logging.debug("%s" % error)
             if not force:
                 return None
