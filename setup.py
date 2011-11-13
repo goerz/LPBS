@@ -3,7 +3,7 @@
 from distutils.core import setup
 
 setup(name='lpbs',
-      version='0.0.1',
+      version='0.0.2',
       description='Local Portable Batch System',
       author='Michael Goerz',
       author_email='goerz@physik.uni-kassel.de',
