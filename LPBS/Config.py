@@ -49,8 +49,7 @@ delete_failed_scratch: 0
 
 [Notification]
 send_mail: 1
-local_growl: 1
-remote_growl: 0
+send_growl: 0
 write_to_log: 0
 write_to_mbox: 0
 
@@ -65,18 +64,19 @@ tls: 1
 [Growl]
 sticky: 1
 growlnotify: growlnotify
+hostname: localhost:23053
+password: secret
 
 [Log]
 notification_log: notification.log
 logfile: lpbs.log
-
-[mbox]
-mboxfile: lpbs.mbox
 """)
 
 def get_config(config_file):
     """ Return an instance of ConfigParser.SafeConfigParser, loaded with the
-        data in config_file
+        data in
+        a) $LPBS_HOME/lpbs.cfg
+        b) the specified config_file
     """
     config = SafeConfigParser()
     config.readfp(DEFAULTS)
