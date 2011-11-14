@@ -79,9 +79,10 @@ class Notifier:
                 self.mail['username'] =  options.config.get("Mail", 'username')
                 self.mail['password'] =  options.config.get("Mail", 'password')
                 self.mail['smtp_server'] =  options.config.get("Mail", 'smtp')
-                for item in options.email_addresses:
-                    for address in item.split(","):
-                        self.mail['recipients'].append(address)
+                if options.email_addresses is not None:
+                    for item in options.email_addresses:
+                        for address in item.split(","):
+                            self.mail['recipients'].append(address)
 
             # Transfer growl options to Notifier
             if options.config.getboolean("Notification", 'send_growl'):
