@@ -1,6 +1,6 @@
 # LPBS
 
-[http://github.com/goerz/lqsub](http://github.com/goerz/lqsub)
+[http://github.com/goerz/LPBS](http://github.com/goerz/LPBS)
 
 Author: [Michael Goerz](http://michaelgoerz.net)
 
