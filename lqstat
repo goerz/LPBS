@@ -1,0 +1,109 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+############################################################################
+#    Copyright (C) 2011 by Michael Goerz                                   #
+#    http://michaelgoerz.net                                               #
+#                                                                          #
+#    This program is free software; you can redistribute it and/or modify  #
+#    it under the terms of the GNU General Public License as published by  #
+#    the Free Software Foundation; either version 3 of the License, or     #
+#    (at your option) any later version.                                   #
+#                                                                          #
+#    This program is distributed in the hope that it will be useful,       #
+#    but WITHOut ANY WARRANTY; without even the implied warranty of        #
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         #
+#    GNU General Public License for more details.                          #
+#                                                                          #
+#    You should have received a copy of the GNU General Public License     #
+#    along with this program; if not, write to the                         #
+#    Free Software Foundation, Inc.,                                       #
+#    59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
+############################################################################
+
+"""
+Delete one or more jobs.
+
+The lqdel command accepts one or more job_identifier operands of the form
+"sequence_number[.server_name][@server]" or 'all'.
+
+Each batch job being deleted will be sent a SIGTERM signal following
+by a SIGKILL signal
+"""
+
+import os.path
+import sys
+import logging
+from glob import glob
+from optparse import OptionParser
+from LPBS.Config import get_config, verify_lpbs_home
+from LPBS.JobIDManager import JobInfo
+
+
+def job_to_be_printed(lock_file, job_list):
+    """ Return True if there is any job in the job_list that correspons to the
+        given lock_file, or if the job_list is empty
+    """
+    if len(job_list) == 0:
+        return True
+    else:
+        job_id = os.path.splitext(os.path.basename(lock_file))[0]
+        for job_name in job_list:
+            if job_id.startswith(job_name):
+                return True
+        return False
+
+
+
+def main(argv=None):
+    """ Main Program """
+    if argv is None:
+        argv = sys.argv
+    arg_parser = OptionParser(
+    usage = "usage: %prog [options] <job_identifier>",
+    description = __doc__)
+    arg_parser.add_option(
+      '--debug', action='store_true', dest='debug',
+      default=False, help="Set logging to debug level")
+    arg_parser.add_option(
+      '--config', action='store', dest='config', help="Config file to "
+      "use, on top of $LPBS_HOME/lpbs.cfg and $HOME/.lpbs.cfg")
+    arg_parser.add_option(
+      '-f', action='store_true', dest='full',
+      help="Specifies that a full status display be written to standard out. ")
+    options, args = arg_parser.parse_args(argv)
+    if (verify_lpbs_home() != 0):
+        return 1
+    options.config = get_config(options.config)
+    if options.debug:
+        logging.basicConfig(filename=os.path.join(os.environ['LPBS_HOME'],
+        options.config.get('LPBS', 'logfile')),
+        format='%(asctime)s %(funcName)s-%(levelname)s: %(message)s',
+        datefmt='%m/%d/%Y %H:%M:%S %z', level=logging.DEBUG)
+    else:
+        logging.basicConfig(filename=os.path.join(os.environ['LPBS_HOME'],
+        options.config.get('LPBS', 'logfile')),
+        format='%(asctime)s: %(message)s', datefmt='%m/%d/%Y %H:%M:%S %z',
+        level=logging.INFO)
+    if options.config is None:
+        return 1
+    lock_files = glob(os.path.join(os.environ['LPBS_HOME'], '*.lock'))
+    printed_header = False
+    for lock_file in lock_files:
+        if job_to_be_printed(lock_file, args[1:]):
+            job_info = JobInfo()
+            job_info.read_lock(lock_file)
+            if options.full:
+                    print job_info.full_info()
+            else:
+                if not printed_header:
+                    print job_info.short_info(print_header=True)
+                    printed_header = True
+                else:
+                    print job_info.short_info()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+
