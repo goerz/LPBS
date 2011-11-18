@@ -113,8 +113,6 @@ class Notifier:
                             logging.debug("Can't parse port '%s'" % port)
                             port = 23053
                         password = self.growl['passwords'][i]
-                        if password == '':
-                            password = None
                         growl_notifier = self._register_growl(hostname, port,
                         password, force=True)
                         if growl_notifier is not None:
@@ -178,7 +176,7 @@ class Notifier:
         return description
 
 
-    def _register_growl(self, hostname, port=23053, password=None, force=False):
+    def _register_growl(self, hostname, port=23053, password='', force=False):
         """ Return a GrowlNotifier that's registered with the given
             hostname:port and the given password. If registration fails, return
             None unless force is True, in which case the unregistered
