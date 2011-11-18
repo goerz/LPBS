@@ -114,7 +114,7 @@ def run_pbs_script(pbs_script, job_id, options):
         else:
             process = subprocess.Popen("./%s" % pbs_script, shell=True,
                                        executable='/bin/bash', env=pbs_env)
-            set_lock(job_id, process.pid)
+            set_lock(job_id, os.getpid())
             notifier.notify(COND_STRT)
             logging.info("Submitted job %s" % job_id)
             retcode = process.wait()
