@@ -32,8 +32,10 @@ import sys
 import subprocess
 import logging
 import signal
+import getpass
+import time
 from optparse import OptionParser
-from LPBS.JobIDManager import get_new_job_id, set_lock, release_lock
+from LPBS.JobIDManager import get_new_job_id, JobInfo
 from LPBS.Config import get_config, verify_lpbs_home, full_expand
 from LPBS.PBSFile import set_options_from_pbs_script
 from LPBS.Notifications import Notifier, COND_STRT, COND_STOP, COND_ABRT, \
@@ -52,6 +54,7 @@ class SignalExc(Exception):
 
 def signal_handler(sig, stack):
     """ Raise SignalExc """
+    logging.debug("signal handler for sig %s" % sig)
     raise SignalExc(sig)
 
 
@@ -59,6 +62,7 @@ def run_pbs_script(pbs_script, job_id, options):
     logging.debug("Preparing for run of PBS script %s (Job ID %s)"
     % (pbs_script, job_id))
     notifier = Notifier(job_id, options)
+    job_info = JobInfo(job_id)
     retcode = 1
     if not os.environ.has_key('LPBS_HOME'):
         return retcode
@@ -78,6 +82,7 @@ def run_pbs_script(pbs_script, job_id, options):
         # set environment
         if options.job_name is not None:
             job_name = options.job_name
+        job_info.name = job_name
         pbs_env = os.environ
         for env_var in ['HOME', 'LANG', 'LOGNAME', 'PATH', 'MAIL', 'SHELL',
         'TZ']:
@@ -95,11 +100,19 @@ def run_pbs_script(pbs_script, job_id, options):
         pbs_env['PBS_NODEFILE'] = os.path.join(os.environ['LPBS_HOME'],
                                                'nodefile')
         pbs_env['PBS_QUEUE'] = ''
+        job_info.variable_list = "%s" % pbs_env
         nodefile_fh = open(pbs_env['PBS_NODEFILE'], 'w')
         nodefile_fh.write(pbs_env['PBS_O_HOST']+"\n")
         nodefile_fh.close()
+        job_info.server = pbs_env['PBS_SERVER']
+        job_info.exec_host = pbs_env['PBS_O_HOST']
+
+        job_info.mail_points = options.mail_options
 
         # redirect I/O
+        job_info.join_path = False
+        job_info.output_path = 'STDOUT'
+        job_info.error_path = 'STDERR'
         if not options.interactive:
             os.setsid()
             stdout_file = "%s.o%s" % (job_name, sequence_number)
@@ -108,13 +121,17 @@ def run_pbs_script(pbs_script, job_id, options):
             os.dup2(devnull.fileno(), sys.stdin.fileno())
             if options.stdout_file is not None:
                 stdout_file = options.stdout_file
+                job_info.output_path = stdout_file
             if options.stderr_file is not None:
                 stderr_file = options.stderr_file
+                job_info.error_path = stderr_file
             if options.oe_join == 'oe':
+                job_info.join_path = True
                 stdout_fh = open(stdout_file, 'w')
                 os.dup2(stdout_fh.fileno(), sys.stdout.fileno())
                 os.dup2(stdout_fh.fileno(), sys.stderr.fileno())
             elif options.oe_join == 'eo':
+                job_info.join_path = True
                 stderr_fh = open(stderr_file, 'w')
                 os.dup2(stderr_fh.fileno(), sys.stdout.fileno())
                 os.dup2(stdout_fh.fileno(), sys.stderr.fileno())
@@ -125,6 +142,9 @@ def run_pbs_script(pbs_script, job_id, options):
                 os.dup2(stderr_fh.fileno(), sys.stderr.fileno())
 
         # pass control to shell, wait for completion
+        job_info.owner = getpass.getuser()
+        job_info.start_time = time.time()
+        job_info.set_lock(os.getpid())
         if options.interactive:
             notifier.notify(COND_STRT)
             logging.info("Started interactive job %s" % job_id)
@@ -133,11 +153,10 @@ def run_pbs_script(pbs_script, job_id, options):
         else:
             process = subprocess.Popen("./%s" % pbs_script, shell=True,
                                        executable='/bin/bash', env=pbs_env)
-            set_lock(job_id, os.getpid())
             notifier.notify(COND_STRT)
             logging.info("Submitted job %s" % job_id)
             retcode = process.wait()
-            release_lock(job_id)
+        job_info.release_lock()
 
         # close I/O
         if not options.interactive:
@@ -166,7 +185,8 @@ def run_pbs_script(pbs_script, job_id, options):
         notifier.notify(COND_ABER, message="%s"%error)
         logging.error("Failed to submit job %s: %s" % (job_id, error))
     except SignalExc:
-        release_lock(job_id)
+        logging.debug("SignalExc")
+        job_info.release_lock()
         notifier.notify(COND_ABRT)
         retcode = 0
         logging.info("Canceled job %s" % job_id)
