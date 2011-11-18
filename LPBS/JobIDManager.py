@@ -62,4 +62,7 @@ def set_lock(job_id, pid):
 
 def release_lock(job_id):
     lockfile = os.path.join(os.environ['LPBS_HOME'], "%s.lock" % job_id) 
-    os.unlink(lockfile)
+    try:
+        os.unlink(lockfile)
+    except OSError:
+        pass

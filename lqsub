@@ -31,12 +31,29 @@ import os.path
 import sys
 import subprocess
 import logging
+import signal
 from optparse import OptionParser
 from LPBS.JobIDManager import get_new_job_id, set_lock, release_lock
 from LPBS.Config import get_config, verify_lpbs_home, full_expand
 from LPBS.PBSFile import set_options_from_pbs_script
 from LPBS.Notifications import Notifier, COND_STRT, COND_STOP, COND_ABRT, \
                                COND_ABER
+
+
+class SignalExc(Exception):
+    """ Exception to be raised when a signal is received """
+    def __init__(self, value):
+        """ Initialize for signal number given as 'value' """
+        self.value = value
+    def __str__(self):
+        """ Retrun signal number as string """
+        return repr(self.value)
+
+
+def signal_handler(sig, stack):
+    """ Raise SignalExc """
+    raise SignalExc(sig)
+
 
 def run_pbs_script(pbs_script, job_id, options):
     logging.debug("Preparing for run of PBS script %s (Job ID %s)"
@@ -45,6 +62,8 @@ def run_pbs_script(pbs_script, job_id, options):
     retcode = 1
     if not os.environ.has_key('LPBS_HOME'):
         return retcode
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGHUP, signal.SIG_IGN)
     try:
 
         job_name = 'job'
@@ -146,6 +165,11 @@ def run_pbs_script(pbs_script, job_id, options):
     except OSError, error:
         notifier.notify(COND_ABER, message="%s"%error)
         logging.error("Failed to submit job %s: %s" % (job_id, error))
+    except SignalExc:
+        release_lock(job_id)
+        notifier.notify(COND_ABRT)
+        retcode = 0
+        logging.info("Canceled job %s" % job_id)
 
     return retcode
 
