@@ -1,6 +1,7 @@
 setup.py
 COPYING
 lqsub
+lqdel
 LPBS/__init__.py
 LPBS/Config.py
 LPBS/JobIDManager.py
