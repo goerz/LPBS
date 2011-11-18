@@ -22,13 +22,7 @@
 ############################################################################
 
 """
-Delete one or more jobs.
-
-The lqdel command accepts one or more job_identifier operands of the form
-"sequence_number[.server_name][@server]" or 'all'.
-
-Each batch job being deleted will be sent a SIGTERM signal following
-by a SIGKILL signal
+Show status of LPBS batch jobs
 """
 
 import os.path
