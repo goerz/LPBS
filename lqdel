@@ -57,7 +57,7 @@ def main(argv=None):
       '--config', action='store', dest='config', help="Config file to "
       "use, on top of $LPBS_HOME/lpbs.cfg and $HOME/.lpbs.cfg")
     arg_parser.add_option(
-      '-w', action='store', dest='delay', default='0', 
+      '-w', action='store', dest='delay', default='1',
       help="Specify the wait delay between the sending of the SIGTERM and "
       "SIGKILL signals. The argument is the length of time in seconds of the "
       "delay.")
@@ -77,19 +77,20 @@ def main(argv=None):
         level=logging.INFO)
     if options.config is None:
         return 1
-    for arg in args:
+    logging.debug("lqdel for args: %s" % ', '.join(args[1:]))
+    for arg in args[1:]:
         if arg == 'all':
             lock_files = glob(os.path.join(os.environ['LPBS_HOME'], '*.lock'))
             for lock_file in lock_files:
                 send_sig_to_job_id(os.path.basename(lock_file))
                 time.sleep(float(options.delay))
-                send_sig_to_job_id(os.path.basename(lock_file), 
-                                   sig=signal.SIGTERM)
+                send_sig_to_job_id(os.path.basename(lock_file),
+                                   sig=signal.SIGKILL)
             break
         else:
             send_sig_to_job_id(arg)
             time.sleep(float(options.delay))
-            send_sig_to_job_id(arg, sig=signal.SIGTERM)
+            send_sig_to_job_id(arg, sig=signal.SIGKILL)
     return 0
 
 
