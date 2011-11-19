@@ -31,6 +31,7 @@ Each batch job being deleted will be sent a SIGTERM signal following
 by a SIGKILL signal
 """
 
+import os
 import os.path
 import sys
 import logging
@@ -39,7 +40,7 @@ import time
 from glob import glob
 from optparse import OptionParser
 from LPBS.Config import get_config, verify_lpbs_home
-from LPBS.JobIDManager import send_sig_to_job_id
+from LPBS.JobIDManager import send_sig_to_job_id, pid_for_job_id
 
 
 
@@ -57,7 +58,7 @@ def main(argv=None):
       '--config', action='store', dest='config', help="Config file to "
       "use, on top of $LPBS_HOME/lpbs.cfg and $HOME/.lpbs.cfg")
     arg_parser.add_option(
-      '-w', action='store', dest='delay', default='1',
+      '-w', action='store', dest='delay', default='30',
       help="Specify the wait delay between the sending of the SIGTERM and "
       "SIGKILL signals. The argument is the length of time in seconds of the "
       "delay.")
@@ -88,9 +89,15 @@ def main(argv=None):
                                    sig=signal.SIGKILL)
             break
         else:
-            send_sig_to_job_id(arg)
-            time.sleep(float(options.delay))
-            send_sig_to_job_id(arg, sig=signal.SIGKILL)
+            try:
+                pgid = os.getpgid(int(pid_for_job_id(arg)))
+            except ValueErrror:
+                pass
+            send_sig_to_job_id(arg, signal.SIGTERM)
+            newpid = os.fork()
+            if newpid == 0:
+                time.sleep(float(options.delay))
+                os.killpg(pgid, signal.SIGKILL)
     return 0
 
 
