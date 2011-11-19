@@ -52,6 +52,24 @@ class SignalExc(Exception):
         return repr(self.value)
 
 
+def psutil_killtree(pid):
+    """ Use psutil to kill a process tree from the bottom up. Return True on
+        success, False on error (i.e. psutil not available)
+    """
+    try:
+        import psutil
+        process = psutil.Process(pid)
+        children = process.get_children()
+        if len(children) == 0:
+            process.kill()
+        else:
+            for child in children:
+                psutil_killtree(child.pid)
+        return True
+    except ImportError:
+        return False
+
+
 def signal_handler(sig, stack):
     """ Raise SignalExc """
     logging.debug("signal handler for sig %s" % sig)
@@ -63,6 +81,7 @@ def run_pbs_script(pbs_script, job_id, options):
     % (pbs_script, job_id))
     notifier = Notifier(job_id, options)
     job_info = JobInfo(job_id)
+    process = None
     retcode = 1
     if not os.environ.has_key('LPBS_HOME'):
         return retcode
@@ -185,7 +204,16 @@ def run_pbs_script(pbs_script, job_id, options):
         notifier.notify(COND_ABER, message="%s"%error)
         logging.error("Failed to submit job %s: %s" % (job_id, error))
     except SignalExc:
+        # Cancel Job
         logging.debug("SignalExc")
+        try:
+            if not psutil_killtree(process.pid):
+                # If psutil didn't work, just terminate the subprocess.
+                # This may leave its children running
+                process.terminate()
+        except AttributeError:
+            # process wasn't even running
+            pass
         job_info.release_lock()
         if os.path.isdir(job_scratch):
             shutil.rmtree(job_scratch, ignore_errors=True)

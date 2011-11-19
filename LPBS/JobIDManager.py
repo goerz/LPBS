@@ -31,6 +31,73 @@ import datetime
 import cPickle as pickle
 from glob import glob
 
+
+def get_cpu_mem_info(pid):
+    """ Return tuple (cput, mem, vmem, threads) with CPU time in seconds, total
+        memory (resident set size) and virtual memory in bytes, all ccumulated
+        for for the process with the given PID and all subprocesses;
+        and number of threads, for the last process in the subprocess chain
+    """
+    cput = 0
+    mem = 0
+    vmem = 0
+    threads = 0
+    try:
+        import psutil
+        try:
+            process = psutil.Process(pid)
+            try:
+                cput = int(sum(process.get_cpu_times()))
+            except psutil.AccessDenied:
+                logging.debug("psutil: Access denied for get_cpu_times")
+                cput = 0
+            try:
+                (mem, vmem) = process.get_memory_info()
+                mem = int(mem)
+                vmem = int(vmem)
+            except psutil.AccessDenied:
+                logging.debug("psutil: Access denied for get_memory_info")
+                (mem, vmem) = (0, 0)
+            children = process.get_children()
+            if len(children) == 0:
+                try:
+                    threads = len(process.get_threads())
+                except psutil.AccessDenied:
+                    logging.debug("psutil: Access denied for get_threads")
+                    threads = 0
+            else:
+                for child in children:
+                    (cput_child, mem_child, vmem_child, threads_child) \
+                    = get_cpu_mem_info(child.pid)
+                    cput = cput + cput_child
+                    mem = mem + mem_child
+                    vmem = vmem + vmem_child
+                    if threads_child > 0:
+                        threads = threads_child
+        except psutil.NoSuchProcess:
+            logging.warn("Process %s is not running anymore" % pid)
+            return (0, 0, 0, 0)
+    except ImportError:
+        logging.debug("psutil not available. Cannot get CPU/mem information")
+        return (0, 0, 0, 0)
+    return (cput, mem, vmem, threads)
+
+
+def format_bytes(bytes):
+    """ Return string representation for number of bytes """
+    remaining = bytes
+    mbytes = remaining / 1048576
+    remaining = remaining - mbytes * 1048576
+    if mbytes > 0:
+        return "%i MB" % mbytes
+    kbytes = remaining / 1024
+    remaining = remaining - kbytes * 1024
+    if kbytes > 0:
+        return "%i KB" % kbytes
+    return str(bytes)
+
+
+
 class JobInfo:
     """ Class for holding Job Info """
     def __init__(self, job_id=None):
@@ -106,6 +173,16 @@ class JobInfo:
             walltime = int(time.time() - self.start_time)
             self.resources_used['walltime'] \
             = str(datetime.timedelta(seconds=walltime))
+        (cput, mem, vmem, threads) = get_cpu_mem_info(self.pid)
+        if cput > 0:
+            self.resources_used['cput'] \
+            = str(datetime.timedelta(seconds=cput))
+        if mem > 0:
+            self.resources_used['mem'] = format_bytes(mem)
+        if vmem > 0:
+            self.resources_used['vmem'] = format_bytes(vmem)
+        if threads > 0:
+            self.resources_used['threads'] = threads
         self.job_id = os.path.splitext(os.path.basename(lockfile))[0]
         self.lockfile = lockfile
     def release_lock(self):
@@ -130,8 +207,9 @@ def get_new_job_id(options):
         sequencefile_fh = open(sequencefile, 'r')
         sequence = int(sequencefile_fh.read())
         sequencefile_fh.close()
-    except IOError, e:
-        print >> sys.stderr, "Could not read from %s:\n%s" % (sequencefile, e)
+    except IOError, error:
+        print >> sys.stderr, "Could not read from %s:\n%s" \
+                             % (sequencefile, error)
         return None
     sequence = sequence + 1
     # write new sequence number back to sequence file
@@ -139,8 +217,9 @@ def get_new_job_id(options):
         sequencefile_fh = open(sequencefile, 'w')
         sequencefile_fh.write(str(sequence))
         sequencefile_fh.close()
-    except IOError, e:
-        print >> sys.stderr, "Could not write to %s:\n%s" % (sequencefile, e)
+    except IOError, error:
+        print >> sys.stderr, "Could not write to %s:\n%s" \
+                             % (sequencefile, error)
         return None
     id_host = options.config.get("Server", 'hostname')
     id_domain = options.config.get("Server", 'domain')
