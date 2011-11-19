@@ -168,7 +168,7 @@ class JobInfo:
         lock = open(lockfile, 'r')
         temp = pickle.load(lock)
         lock.close()
-        logging.debug("Read JobInfo from lock:\n%s" % temp)
+        logging.debug("Read JobInfo from lock:\n%s", temp)
         self.__dict__ = temp.__dict__
         if self.start_time > 0:
             walltime = int(time.time() - self.start_time)
@@ -192,7 +192,7 @@ class JobInfo:
             raise ValueError("Can't release lock unless job_id is set")
         lockfile = os.path.join(os.environ['LPBS_HOME'], "%s.lock"
                                 % self.job_id)
-        logging.debug("Releasing lock: %s" % lockfile)
+        logging.debug("Releasing lock: %s", lockfile)
         try:
             os.unlink(lockfile)
         except OSError:
@@ -244,9 +244,9 @@ def pid_for_job_id(job_id):
                 job_info.read_lock(lock_file)
                 return(job_info.pid)
             except IOError, error:
-                logging.debug("Failed to open lock: %s" % error)
+                logging.debug("Failed to open lock: %s", error)
                 return None
-    logging.debug("No lock file found for job_id %s" % job_id)
+    logging.debug("No lock file found for job_id %s", job_id)
     return None
 
 
@@ -256,12 +256,10 @@ def send_sig_to_job_id(job_id, sig=signal.SIGTERM):
     if pid is not None:
         try:
             os.kill(pid, sig)
-            logging.info("Sent signal %s to job %s (PID %s)"
-                         % (sig, job_id, pid))
+            logging.info("Sent signal %s to job %s (PID %s)", sig, job_id, pid)
         except OSError, error:
-            logging.debug("Sent signal %s to job %s (PID %s)"
-                         % (sig, job_id, pid))
-            logging.debug("Failed to send signal: %s" % error)
+            logging.debug("Sent signal %s to job %s (PID %s)", sig, job_id, pid)
+            logging.debug("Failed to send signal: %s", error)
     else:
-        logging.debug("Skipped sending signal %s to job %s (pid not found)"
-                      % (sig, job_id))
+        logging.debug("Skipped sending signal %s to job %s (pid not found)",
+                      sig, job_id)

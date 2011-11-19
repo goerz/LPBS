@@ -19,10 +19,10 @@
 #    59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ############################################################################
 
+""" Work with PBS script files """
+
 import shlex
 import logging
-
-""" Work with PBS script files """
 
 def set_options_from_pbs_script(arg_parser, options, pbs_script):
     """ Add directives in pbs_script to existing options, using arg_parser
@@ -30,12 +30,15 @@ def set_options_from_pbs_script(arg_parser, options, pbs_script):
     opt_string = ''
     pbs_fh = open(pbs_script)
     for line in pbs_fh:
-        if line.startswith('#!'): continue
-        if line.strip() == (''): continue
-        if not line.startswith('#PBS '): break
+        if line.startswith('#!'):
+            continue
+        if line.strip() == (''):
+            continue
+        if not line.startswith('#PBS '):
+            break
         opt_string += line.replace('#PBS', '', 1)
     pbs_fh.close()
-    logging.debug("opt_string extracted from PBS file:\n%s" % opt_string)
+    logging.debug("opt_string extracted from PBS file:\n%s", opt_string)
     argv = shlex.split(opt_string)
     options, args = arg_parser.parse_args(argv, options)
 

@@ -72,13 +72,13 @@ def psutil_killtree(pid):
 
 def signal_handler(sig, stack):
     """ Raise SignalExc """
-    logging.debug("signal handler for sig %s" % sig)
+    logging.debug("signal handler for sig %s", sig)
     raise SignalExc(sig)
 
 
 def run_pbs_script(pbs_script, job_id, options):
-    logging.debug("Preparing for run of PBS script %s (Job ID %s)"
-    % (pbs_script, job_id))
+    logging.debug("Preparing for run of PBS script %s (Job ID %s)",
+                  pbs_script, job_id)
     notifier = Notifier(job_id, options)
     job_info = JobInfo(job_id)
     process = None
@@ -166,14 +166,14 @@ def run_pbs_script(pbs_script, job_id, options):
         job_info.set_lock(os.getpid())
         if options.interactive:
             notifier.notify(COND_STRT)
-            logging.info("Started interactive job %s" % job_id)
+            logging.info("Started interactive job %s", job_id)
             retcode = subprocess.call("./%s" % pbs_script, shell=True,
                                       executable='/bin/bash', env=pbs_env)
         else:
             process = subprocess.Popen("./%s" % pbs_script, shell=True,
                                        executable='/bin/bash', env=pbs_env)
             notifier.notify(COND_STRT)
-            logging.info("Submitted job %s" % job_id)
+            logging.info("Submitted job %s", job_id)
             retcode = process.wait()
         job_info.release_lock()
 
@@ -191,7 +191,7 @@ def run_pbs_script(pbs_script, job_id, options):
         # notify about end of process
         notifier.job_retcode = retcode
         notifier.notify(COND_STOP)
-        logging.info("Finished job %s with status %s" % (job_id, retcode))
+        logging.info("Finished job %s with status %s", job_id, retcode)
 
         # remove scratch folder
         if os.path.isdir(job_scratch):
@@ -202,7 +202,7 @@ def run_pbs_script(pbs_script, job_id, options):
 
     except OSError, error:
         notifier.notify(COND_ABER, message="%s"%error)
-        logging.error("Failed to submit job %s: %s" % (job_id, error))
+        logging.error("Failed to submit job %s: %s", job_id, error)
     except SignalExc:
         # Cancel Job
         logging.debug("SignalExc")
@@ -219,7 +219,7 @@ def run_pbs_script(pbs_script, job_id, options):
             shutil.rmtree(job_scratch, ignore_errors=True)
         notifier.notify(COND_ABRT)
         retcode = 0
-        logging.info("Canceled job %s" % job_id)
+        logging.info("Canceled job %s", job_id)
 
     return retcode
 
@@ -227,36 +227,36 @@ def run_pbs_script(pbs_script, job_id, options):
 
 def submit_pbs_script(pbs_script, options):
     """ Submit the given PBS script """
-    logging.debug("Submitting PBS script %s" % pbs_script)
+    logging.debug("Submitting PBS script %s", pbs_script)
     if os.path.isfile(pbs_script) and os.access(pbs_script, os.X_OK):
         job_id = get_new_job_id(options)
-        logging.debug("assigning Job ID %s" % job_id)
+        logging.debug("assigning Job ID %s", job_id)
         if job_id is None:
             print >> sys.stderr, "Could not get new job ID"
             return 1
         if options.interactive:
             retcode = run_pbs_script(pbs_script, job_id, options)
-            logging.debug("Returning process with code %s" % retcode)
+            logging.debug("Returning process with code %s", retcode)
             return retcode
         else:
             newpid = os.fork()
             if newpid == 0:
                 # Child process
                 retcode = run_pbs_script(pbs_script, job_id, options)
-                logging.debug("Returning child process with code %s" % retcode)
+                logging.debug("Returning child process with code %s", retcode)
                 return retcode
             else:
                 # Parent process
                 if not options.do_not_print_id:
                     print job_id
                 retcode = 0
-                logging.debug("Returning parent process with code %s" % retcode)
+                logging.debug("Returning parent process with code %s", retcode)
                 return retcode
     else:
         print >> sys.stderr, "'%s' must be an executable script" % pbs_script
-        logging.critical("'%s'is not an executable script" % pbs_script)
+        logging.critical("'%s'is not an executable script", pbs_script)
         retcode = 0
-        logging.debug("Returning process with code %s" % retcode)
+        logging.debug("Returning process with code %s", retcode)
         return retcode
 
 

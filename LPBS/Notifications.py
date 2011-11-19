@@ -109,7 +109,7 @@ class Notifier:
                         try:
                             port = int(port)
                         except ValueError:
-                            logging.debug("Can't parse port '%s'" % port)
+                            logging.debug("Can't parse port '%s'", port)
                             port = 23053
                         password = self.growl['passwords'][i]
                         growl_notifier = self._register_growl(hostname, port,
@@ -123,7 +123,7 @@ class Notifier:
             COND_ABRT, or COND_ABER. If message is given, it is appended to the
             auto-generated notification text
         """
-        logging.debug("Sending notification for condition %i" % condition)
+        logging.debug("Sending notification for condition %i", condition)
         if self.notifications['mail']:
             self.notify_email(condition, message)
         if self.notifications['growl']:
@@ -132,7 +132,7 @@ class Notifier:
 
     def notify_growl(self, condition, message=None):
         """ Send notification via growl """
-        logging.debug("Sending growl notification for condition %i" % condition)
+        logging.debug("Sending growl notification for condition %i", condition)
         titles = ["Begun execution", "Execution Terminated",
                   "Execution aborted", "Execution failed"]
         try:
@@ -143,16 +143,16 @@ class Notifier:
             growl_type = self.growl_types[-1] # "Other"
             title = "LPBS"
         for growl_notifier in self._growl_notifiers:
-            logging.debug("Sending growl notification to host %s" %
-            growl_notifier.hostname)
+            logging.debug("Sending growl notification to host %s",
+                          growl_notifier.hostname)
             try:
                 growl_notifier.notify(noteType=growl_type, title=title,
                 description=self._get_notify_description(condition, message),
                 icon = "", sticky = self.growl['sticky'], priority = 1)
             except socket.error, error:
-                logging.warn("Can't connect to growl on %s"
-                              % growl_notifier.hostname)
-                logging.debug("%s" % error)
+                logging.warn("Can't connect to growl on %s",
+                              growl_notifier.hostname)
+                logging.debug("%s", error)
 
 
     def _get_notify_description(self, condition, message=None):
@@ -181,7 +181,7 @@ class Notifier:
             None unless force is True, in which case the unregistered
             GrowlNotifier is returned
         """
-        logging.debug("Registering with growl on %s:%s" % (hostname, port))
+        logging.debug("Registering with growl on %s:%s", hostname, port)
         growl_notifier = gntp_notifier.GrowlNotifier(
         applicationName = "LPBS",
         notifications = self.growl_types,
@@ -192,14 +192,14 @@ class Notifier:
         try:
             growl_notifier.register()
         except socket.error, error:
-            logging.warn("Can't connect to growl on %s:%s"
-                          % (growl_notifier.hostname, port))
-            logging.debug("%s" % error)
+            logging.warn("Can't connect to growl on %s:%s",
+                          growl_notifier.hostname, port)
+            logging.debug("%s", error)
             if not force:
                 return None
         except gntp.BaseError, error:
             logging.warn("GNTP Exception")
-            logging.debug("%s" % error)
+            logging.debug("%s", error)
             return None
         return growl_notifier
 
@@ -208,12 +208,12 @@ class Notifier:
     def notify_email(self, condition, message=None):
         """ Notify by email """
         if not self.mail['mail_conditions'][condition-1]:
-            logging.debug("Skipping email notification for condition"
-                          % condition)
+            logging.debug("Skipping email notification for condition %i",
+                          condition)
             return
-        logging.debug("Sending email notification for condition %i" % condition)
+        logging.debug("Sending email notification for condition %i", condition)
         for recipient in self.mail['recipients']:
-            logging.debug("Sending email to %s" % recipient)
+            logging.debug("Sending email to %s", recipient)
             msg = email.Message.Message()
             fromaddr = self.mail['sender']
             smpt_server = self.mail['smtp_server']
@@ -244,11 +244,11 @@ class Notifier:
                 server.quit()
             except socket.error, error:
                 logging.warn("Can't connect to smtp server")
-                logging.debug("%s" % error)
+                logging.debug("%s", error)
             except smtplib.SMTPAuthenticationError, error:
                 logging.warn("SMTP Authentication Error")
-                logging.debug("%s" % error)
+                logging.debug("%s", error)
             except smtplib.SMTPException, error:
                 logging.warn("SMTP Exception")
-                logging.debug("%s" % error)
+                logging.debug("%s", error)
 

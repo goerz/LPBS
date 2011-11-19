@@ -78,7 +78,7 @@ def main(argv=None):
         level=logging.INFO)
     if options.config is None:
         return 1
-    logging.debug("lqdel for args: %s" % ', '.join(args[1:]))
+    logging.debug("lqdel for args: %s", ', '.join(args[1:]))
     for arg in args[1:]:
         if arg == 'all':
             lock_files = glob(os.path.join(os.environ['LPBS_HOME'], '*.lock'))
@@ -91,7 +91,7 @@ def main(argv=None):
         else:
             try:
                 pgid = os.getpgid(int(pid_for_job_id(arg)))
-            except ValueErrror:
+            except ValueError:
                 pass
             send_sig_to_job_id(arg, signal.SIGTERM)
             newpid = os.fork()

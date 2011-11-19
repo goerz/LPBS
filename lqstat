@@ -107,7 +107,7 @@ def main(argv=None):
                               "locks")
             if pid_is_running:
                 if options.full:
-                        print job_info.full_info()
+                    print job_info.full_info()
                 else:
                     if not printed_header:
                         print job_info.short_info(print_header=True)
@@ -115,11 +115,11 @@ def main(argv=None):
                     else:
                         print job_info.short_info()
             else:
-                logging.warn("lock %s is stale" % lock_file)
+                logging.warn("lock %s is stale", lock_file)
                 try:
                     os.unlink(lock_file)
                 except OSError, error:
-                    logging.debug("Error in removing stale lock: %s" % error)
+                    logging.debug("Error in removing stale lock: %s", error)
     return 0
 
 
