@@ -266,8 +266,8 @@ def main(argv=None):
     if argv is None:
         argv = sys.argv
     arg_parser = OptionParser(
-    usage = "",
-    description = __doc__)
+    usage="usage: %prog [options] <PBS script>",
+    add_help_option=False, description=__doc__)
     arg_parser.add_option(
       '-a', action='store', dest='exec_date_time', metavar="DATE_TIME",
       help="(ignored)")
@@ -284,6 +284,11 @@ def main(argv=None):
       '-C', action='store', dest='directive_prefix', metavar="DIRECTIVE_PREFIX",
       help="(ignored)")
     arg_parser.add_option(
+      '--config', action='store', dest='config', help="Config file to "
+      "use, on top of $LPBS_HOME/lpbs.cfg and $HOME/.lpbs.cfg")
+    # TODO: -d
+    # TODO: -D
+    arg_parser.add_option(
       '--debug', action='store_true', dest='debug',
       default=False, help="Set logging to debug level")
     arg_parser.add_option(
@@ -294,9 +299,16 @@ def main(argv=None):
       "default name has the following form: "
       "job_name.esequence_number")
     arg_parser.add_option(
+      '-f', action='store_true', dest='fault_tolerant', help="(ignored)")
+    arg_parser.add_option(
+      '--help', action='store_true', dest='print_help',
+      help="show this help message and exit")
+    arg_parser.add_option(
+      '-h', action='store_true', dest='hold', help="(ignored)")
+    arg_parser.add_option(
       '-I', action='store_true', dest='interactive',
-      help="Declares that the job is to be run \"interactively\". The standard"
-      "input, output, and error streams of the job are connected through lqsub"
+      help="Declares that the job is to be run \"interactively\". The standard "
+      "input, output, and error streams of the job are connected through lqsub "
       "to the terminal session in which lqsub is running")
     arg_parser.add_option(
       '-j', action='store', dest='oe_join', metavar="JOIN",
@@ -307,6 +319,7 @@ def main(argv=None):
       "of 'eo' directs that the two streams will be merged, intermixed, "
       "as standard error.  If the join argument is n or the option is "
       "not specified, the two streams will be two separate files.")
+    # TODO: -k
     arg_parser.add_option(
       '-l', action='append', dest='resource_list', metavar="RESOURCE_LIST",
       help="(ignored)")
@@ -326,17 +339,6 @@ def main(argv=None):
       help="Email address to which messages are send. Option can be given "
       "multiple times")
     arg_parser.add_option(
-      '-o', action='store', dest='stdout_file', metavar="PATH",
-      help="Defines the path to be used for the standard output stream of "
-      "the batch job. If the -o option is not specified, the default "
-      "file name for the standard output stream will be used. The "
-      "default name has the following form: "
-      "job_name.osequence_number")
-    arg_parser.add_option(
-      '-z', action='store_true', dest='do_not_print_id',
-      default=False, help="Directs that the lqsub command is not to write the "
-      "job identifier assigned to the job to the commands standard output.")
-    arg_parser.add_option(
       '-N', action='store', dest='job_name', help="Declares a name for the "
       "job. The name specified may be up to and including 15 characters in "
       "length. It must consist of printable, non white space characters with "
@@ -345,9 +347,43 @@ def main(argv=None):
       "command line. If no script file name was specified and the script was "
       "read from the standard input, then the job name will be set to STDIN.")
     arg_parser.add_option(
-      '--config', action='store', dest='config', help="Config file to "
-      "use, on top of $LPBS_HOME/lpbs.cfg and $HOME/.lpbs.cfg")
+      '-o', action='store', dest='stdout_file', metavar="PATH",
+      help="Defines the path to be used for the standard output stream of "
+      "the batch job. If the -o option is not specified, the default "
+      "file name for the standard output stream will be used. The "
+      "default name has the following form: "
+      "job_name.osequence_number")
+    arg_parser.add_option(
+      '-p', action='store', dest='priority', metavar="PRIORITY",
+      help="(ignored)")
+    arg_parser.add_option(
+      '-P', action='store', dest='sudo_user', metavar="USER",
+      help="(ignored)")
+    arg_parser.add_option(
+      '-q', action='store', dest='queue', metavar="DESTINATION",
+      help="(ignored)")
+    arg_parser.add_option(
+      '-r', action='store_true', dest='rerunnable', help="(ignored)")
+    # TODO: -S
+    # TODO: -t
+    arg_parser.add_option(
+      '-u', action='store', dest='exec_user', metavar="USER",
+      help="(ignored)")
+    # TODO: -v
+    # TODO: -V
+    arg_parser.add_option(
+      '-W', action='store', dest='extra_attributes',
+      metavar="ADDITIONAL_ATTRIBUTES", help="(ignored)")
+    arg_parser.add_option(
+      '-X', action='store_true', dest='x_forwarding', help="(ignored)")
+    arg_parser.add_option(
+      '-z', action='store_true', dest='do_not_print_id',
+      default=False, help="Directs that the lqsub command is not to write the "
+      "job identifier assigned to the job to the commands standard output.")
     options, args = arg_parser.parse_args(argv)
+    if options.print_help:
+        arg_parser.print_help()
+        return 0
     if (verify_lpbs_home() != 0):
         return 1
     options.config = get_config(options.config)
@@ -365,7 +401,9 @@ def main(argv=None):
     if options.config is None:
         return 1
     if (len(args) < 2):
-        print >> sys.stderr, "You must supply a pbs script"
+        arg_parser.print_usage()
+        print >> sys.stderr, "You must supply a pbs script. " \
+                             "Run with option '--help' for more information."
         return 1
     pbs_script = args[1]
     set_options_from_pbs_script(arg_parser, options, pbs_script)
