@@ -55,7 +55,6 @@ class Notifier:
         self.growl['sticky'] = False
         self.growl['hostnames'] = []
         self.growl['passwords'] = []
-        self.growl['bin'] = 'growlnotify'
         self.mail = {}
         self.mail['recipients'] = []
         self.mail['use_tls'] = True
