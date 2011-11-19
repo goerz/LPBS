@@ -187,6 +187,8 @@ def run_pbs_script(pbs_script, job_id, options):
     except SignalExc:
         logging.debug("SignalExc")
         job_info.release_lock()
+        if os.path.isdir(job_scratch):
+            shutil.rmtree(job_scratch, ignore_errors=True)
         notifier.notify(COND_ABRT)
         retcode = 0
         logging.info("Canceled job %s" % job_id)
