@@ -35,7 +35,7 @@ from LPBS.JobIDManager import JobInfo
 
 
 def job_to_be_printed(lock_file, job_list):
-    """ Return True if there is any job in the job_list that correspons to the
+    """ Return True if there is any job in the job_list that corresponds to the
         given lock_file, or if the job_list is empty
     """
     if len(job_list) == 0:
@@ -65,6 +65,9 @@ def main(argv=None):
     arg_parser.add_option(
       '-f', action='store_true', dest='full',
       help="Specifies that a full status display be written to standard out. ")
+    arg_parser.add_option(
+      '-u', action='store', dest='user',
+      help="Show only jobs belonging to USER")
     options, args = arg_parser.parse_args(argv)
     if (verify_lpbs_home() != 0):
         return 1
@@ -87,6 +90,9 @@ def main(argv=None):
         if job_to_be_printed(lock_file, args[1:]):
             job_info = JobInfo()
             job_info.read_lock(lock_file)
+            if options.user is not None:
+                if not job_info.owner == options.user:
+                    continue
             if options.full:
                     print job_info.full_info()
             else:
