@@ -126,6 +126,7 @@ class JobInfo:
         full_info_str += "    Job_Owner = %s\n" % self.owner
         full_info_str += "    server = %s\n" % self.server
         full_info_str += "    exec_host = %s\n" % self.exec_host
+        full_info_str += "    PID = %s\n" % self.pid
         full_info_str += "    Error_Path = %s\n" % self.error_path
         full_info_str += "    Join_Path = %s\n" % self.join_path
         full_info_str += "    Mail_Points = %s\n" % self.mail_points
