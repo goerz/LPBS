@@ -77,6 +77,7 @@ def signal_handler(sig, stack):
 
 
 def run_pbs_script(pbs_script, job_id, options):
+    """ Run the given pbs_script """
     logging.debug("Preparing for run of PBS script %s (Job ID %s)",
                   pbs_script, job_id)
     notifier = Notifier(job_id, options)
@@ -102,7 +103,25 @@ def run_pbs_script(pbs_script, job_id, options):
         if options.job_name is not None:
             job_name = options.job_name
         job_info.name = job_name
-        pbs_env = os.environ
+        pbs_env = {}
+        if options.copy_environment:
+            pbs_env = os.environ
+        if options.extra_env_vars is not None:
+            for var_value in options.extra_env_vars.split(","):
+                try:
+                    var, value = var_value.split("=", 1)
+                    var = var.strip()
+                    value = value.strip()
+                except ValueError:
+                    var = var_value.strip()
+                    value = ''
+                    if os.environ.has_key(var):
+                        value = os.environ[var]
+                pbs_env[var] = value
+        # Copy the standard "login" variables into the environment
+        for env_var in ['HOME', 'LOGNAME', 'USER', 'SHELL', 'TERM', 'MAIL']:
+            if os.environ.has_key(env_var):
+                pbs_env[env_var] = os.environ[env_var]
         for env_var in ['HOME', 'LANG', 'LOGNAME', 'PATH', 'MAIL', 'SHELL',
         'TZ']:
             if os.environ.has_key(env_var):
@@ -160,18 +179,40 @@ def run_pbs_script(pbs_script, job_id, options):
                 os.dup2(stdout_fh.fileno(), sys.stdout.fileno())
                 os.dup2(stderr_fh.fileno(), sys.stderr.fileno())
 
-        # pass control to shell, wait for completion
         job_info.owner = getpass.getuser()
         job_info.start_time = time.time()
         job_info.set_lock(os.getpid())
+        script_copy = os.path.join(os.environ['LPBS_HOME'], "%s.SC" % job_id)
+        shutil.copy(pbs_script, script_copy)
+        os.chmod(script_copy, 0o700)
+        if options.chroot is not None:
+            pbs_env['PBS_O_ROOTDIR'] = options.chroot
+            os.chroot(options.chroot)
+        init_dir = os.environ['HOME']
+        if options.init_dir is not None:
+            init_dir = options.init_dir
+            pbs_env['PBS_O_INITDIR'] = init_dir
+        cmd_list = []
+        if options.shell is not None:
+            shell = options.shell
+            if "," in shell:
+                shell = shell.split(",")[0]
+            if "@" in shell:
+                shell = shell.split("@")[0]
+            shell = shell.strip()
+            cmd_list.append(shell)
+        else:
+            cmd_list.append(os.environ['SHELL'])
+        cmd_list.append('-l')
+        cmd_list.append('-c')
+        cmd_list.append(script_copy)
+        # pass control to shell, wait for completion
         if options.interactive:
             notifier.notify(COND_STRT)
             logging.info("Started interactive job %s", job_id)
-            retcode = subprocess.call("./%s" % pbs_script, shell=True,
-                                      executable='/bin/bash', env=pbs_env)
+            retcode = subprocess.call(cmd_list, env=pbs_env, cwd=init_dir)
         else:
-            process = subprocess.Popen("./%s" % pbs_script, shell=True,
-                                       executable='/bin/bash', env=pbs_env)
+            process = subprocess.Popen(cmd_list, env=pbs_env, cwd=init_dir)
             notifier.notify(COND_STRT)
             logging.info("Submitted job %s", job_id)
             retcode = process.wait()
@@ -286,8 +327,15 @@ def main(argv=None):
     arg_parser.add_option(
       '--config', action='store', dest='config', help="Config file to "
       "use, on top of $LPBS_HOME/lpbs.cfg and $HOME/.lpbs.cfg")
-    # TODO: -d
-    # TODO: -D
+    arg_parser.add_option(
+      '-d', action='store', dest='init_dir', metavar="PATH",
+      help="Defines the working directory path to be used for the job. If the "
+      "-d option is not specified, the default working directory is the home "
+      "directory. This option sets the environment variable PBS_O_INITDIR.")
+    arg_parser.add_option(
+      '-D', action='store', dest='chroot', metavar="PATH",
+      help="Defines the root directory to be used for the job. This option "
+      "sets the environment variable PBS_O_ROOTDIR.")
     arg_parser.add_option(
       '--debug', action='store_true', dest='debug',
       default=False, help="Set logging to debug level")
@@ -319,7 +367,9 @@ def main(argv=None):
       "of 'eo' directs that the two streams will be merged, intermixed, "
       "as standard error.  If the join argument is n or the option is "
       "not specified, the two streams will be two separate files.")
-    # TODO: -k
+    arg_parser.add_option(
+      '-k', action='store', dest='keep', metavar="KEEP",
+      help="(ignored)")
     arg_parser.add_option(
       '-l', action='append', dest='resource_list', metavar="RESOURCE_LIST",
       help="(ignored)")
@@ -364,13 +414,25 @@ def main(argv=None):
       help="(ignored)")
     arg_parser.add_option(
       '-r', action='store_true', dest='rerunnable', help="(ignored)")
-    # TODO: -S
+    arg_parser.add_option(
+      '-S', action='store', dest='shell', metavar="SHELL",
+      help="Declares the shell that interprets the job script.")
     # TODO: -t
     arg_parser.add_option(
       '-u', action='store', dest='exec_user', metavar="USER",
       help="(ignored)")
-    # TODO: -v
-    # TODO: -V
+    arg_parser.add_option(
+      '-v', action='store', dest='extra_env_vars', metavar="VARIABLE_LIST",
+      help="In addition to the otherwise determined set of environmanet "
+      "variables, VARIABLE_LIST names environment variables from the lqsub "
+      "command environment which are made available to the job when it "
+      "executes.  The VARIABLE_LIST is a comma separated list of strings of "
+      "the form variable or variable=value. These variables and their values "
+      "are passed to the job.")
+    arg_parser.add_option(
+      '-V', action='store_true', dest='copy_environment',
+      default=False, help="Declares that all environment variables in the "
+      "lqsub commands environment are to be exported to the batch job.")
     arg_parser.add_option(
       '-W', action='store', dest='extra_attributes',
       metavar="ADDITIONAL_ATTRIBUTES", help="(ignored)")
