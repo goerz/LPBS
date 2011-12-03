@@ -90,7 +90,7 @@ def run_pbs_script(pbs_script, job_id, options):
     signal.signal(signal.SIGHUP, signal.SIG_IGN)
     try:
 
-        job_name = 'job'
+        job_name = os.path.basename(pbs_script)
         sequence_number = job_id[0:job_id.index('.')]
 
         # create the scratch folder
@@ -417,7 +417,6 @@ def main(argv=None):
     arg_parser.add_option(
       '-S', action='store', dest='shell', metavar="SHELL",
       help="Declares the shell that interprets the job script.")
-    # TODO: -t
     arg_parser.add_option(
       '-u', action='store', dest='exec_user', metavar="USER",
       help="(ignored)")
