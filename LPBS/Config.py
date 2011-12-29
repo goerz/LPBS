@@ -48,7 +48,7 @@ keep_scratch: 0
 delete_failed_scratch: 0
 
 [Notification]
-send_mail: 1
+send_mail: 0
 send_growl: 0
 
 [Mail]
