@@ -209,9 +209,7 @@ def get_new_job_id(options):
         sequence = int(sequencefile_fh.read())
         sequencefile_fh.close()
     except IOError, error:
-        print >> sys.stderr, "Could not read from %s:\n%s" \
-                             % (sequencefile, error)
-        return None
+        sequence = 0
     sequence = sequence + 1
     # write new sequence number back to sequence file
     try:
