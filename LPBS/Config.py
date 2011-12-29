@@ -21,7 +21,7 @@
 
 """ Manage Configuration """
 
-from ConfigParser import SafeConfigParser
+from ConfigParser import SafeConfigParser, ParsingError
 import os
 import sys
 from StringIO import StringIO
@@ -162,7 +162,11 @@ def get_config(config_file):
             config_files.append(config_file)
     except TypeError:
         pass
-    config.read(config_files)
+    try:
+        config.read(config_files)
+    except ParsingError, error:
+        print >> sys.stderr, str(error)
+
     return config
 
 
