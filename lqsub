@@ -219,6 +219,10 @@ def run_pbs_script(pbs_script, job_id, options):
             logging.info("Submitted job %s", job_id)
             retcode = process.wait()
         job_info.release_lock()
+        try:
+            os.unlink(script_copy)
+        except OSError:
+            pass
 
         # close I/O
         if not options.interactive:
@@ -258,6 +262,10 @@ def run_pbs_script(pbs_script, job_id, options):
             # process wasn't even running
             pass
         job_info.release_lock()
+        try:
+            os.unlink(script_copy)
+        except OSError:
+            pass
         if os.path.isdir(job_scratch):
             shutil.rmtree(job_scratch, ignore_errors=True)
         notifier.notify(COND_ABRT)
