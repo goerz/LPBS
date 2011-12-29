@@ -58,7 +58,7 @@ class Notifier:
         self.mail = {}
         self.mail['recipients'] = []
         self.mail['use_tls'] = True
-        self.mail['mail_conditions'] = [True, True, True]
+        self.mail['mail_conditions'] = [True, True, True, True]
         self.mail['from'] = ''
         self.mail['authenticate'] = False
         self.mail['username'] = ''
