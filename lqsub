@@ -94,8 +94,10 @@ def run_pbs_script(pbs_script, job_id, options):
         sequence_number = job_id[0:job_id.index('.')]
 
         # create the scratch folder
-        job_scratch = full_expand(os.path.join(
-                      options.config.get('Scratch', 'scratch_root'), job_id))
+        scratch_root = full_expand(os.path.join(
+                           os.environ['LPBS_HOME'],
+                           options.config.get('Scratch', 'scratch_root')))
+        job_scratch = os.path.join(scratch_root, job_id)
         if (options.config.getboolean('Scratch', 'create_jobid_folder')):
             os.mkdir(job_scratch)
 
