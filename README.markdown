@@ -23,11 +23,7 @@ the job submitted to it. LPBS provides further tools to manage running jobs.
 
 ## Installation ##
 
-LPBS can be install from PyPi, using
-
-    pip install LPBS
-
-Alternatively, the package can be installed from source with
+The package can be installed from source with
 
     python setup.py install
 
