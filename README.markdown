@@ -167,7 +167,7 @@ running jobs, and `lqdel` is used to abort running jobs. For example:
     -------------------- --------------- --------------- ---------------
     3.localhost.local    pbstest         goerz           0:00:22
 
-    goerz@ophelia:~> lqstat -f 3.localhost.local
+    goerz@localhost:~> lqstat -f 3.localhost.local
     Job Id: 3.localhost.local
         Job_Name = pbstest
         Job_Owner = goerz
