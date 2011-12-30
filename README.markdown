@@ -122,17 +122,20 @@ the following default values will be created:
 
     [Growl]
 
-    # Settings for Growl notifications. Notifications are sent to either localhost
-    # or a remote host via the GNTP protocol. The 'hostname' setting gives the
-    # address and port of the Growl server, the given 'password' is used for
-    # authentication (note that if sending to localhost, no authentication is
-    # necessary). If 'sticky' is set to 1, the Growl notifications will be sticky.
-    # It is possible to send notifications to more than one host. In this case, both
+    # Settings for Growl notifications. Notifications are sent to either
+    # localhost or a remote host via the GNTP protocol. The 'hostname' setting
+    # gives the address and port of the Growl server, the given 'password' is
+    # used for authentication (note that if sending to localhost, no
+    # authentication is necessary, and the password should be empty). If
+    # 'sticky' is set to 1, the Growl notifications will be sticky.  It is
+    # possible to send notifications to more than one host. In this case, both
     # 'hostname' and 'password' should be a comma-separated list of values, with
-    # each item corresponding to one host.
+    # each item corresponding to one host. E.g.
+    # hostname: localhost, remotehost
+    # password: , secret
 
     hostname: localhost:23053
-    password: secret
+    password:
     sticky: 0
 
 

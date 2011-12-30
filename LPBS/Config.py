@@ -126,7 +126,7 @@ tls: 1
 # each item corresponding to one host.
 
 hostname: localhost:23053
-password: secret
+password:
 sticky: 0
 
 
