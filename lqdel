@@ -40,7 +40,7 @@ import time
 from glob import glob
 from optparse import OptionParser
 from LPBS.Config import get_config, verify_lpbs_home
-from LPBS.JobIDManager import send_sig_to_job_id, pid_for_job_id
+from LPBS.JobUtils import send_sig_to_job_id, pid_for_job_id
 
 
 

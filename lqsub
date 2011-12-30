@@ -35,7 +35,7 @@ import signal
 import getpass
 import time
 from optparse import OptionParser
-from LPBS.JobIDManager import get_new_job_id, JobInfo
+from LPBS.JobUtils import get_new_job_id, JobInfo
 from LPBS.Config import get_config, verify_lpbs_home, full_expand
 from LPBS.PBSFile import set_options_from_pbs_script
 from LPBS.Notifications import Notifier, COND_STRT, COND_STOP, COND_ABRT, \

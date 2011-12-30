@@ -5,7 +5,7 @@ lqdel
 lqstat
 LPBS/__init__.py
 LPBS/Config.py
-LPBS/JobIDManager.py
+LPBS/JobUtils.py
 LPBS/Notifications.py
 LPBS/PBSFile.py
 README.markdown

@@ -31,7 +31,7 @@ import logging
 from glob import glob
 from optparse import OptionParser
 from LPBS.Config import get_config, verify_lpbs_home
-from LPBS.JobIDManager import JobInfo
+from LPBS.JobUtils import JobInfo
 
 
 def job_to_be_printed(lock_file, job_list):

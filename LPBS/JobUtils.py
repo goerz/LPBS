@@ -19,7 +19,7 @@
 #    59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ############################################################################
 
-""" Manage Job IDs """
+""" Utility functions and classes for managing Jobs  """
 
 import os
 import sys
