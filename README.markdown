@@ -9,13 +9,13 @@ Local Portable Batch System: Emulating PBS on a local workstation
 This code is licensed under the [GPL](http://www.gnu.org/licenses/gpl.html)
 
 [PBS][1]/[TORQUE][2] is a job scheduling system that is used on many high
-performance computing clusters. The LPBS package provides tools to run
-[PBS][PBS] job scripts on a local workstation. Specifically, LPBS provides the
-`lqsub` command that takes the same options as the PBS `qsub` command and runs a
-job script locally, in an environment virtually identical to one that PBS/TORQUE
-would provide. The job will run in the background and be assigned a job ID.
-Unlike the PBS system, LPBS will not perform any scheduling, but will simply run
-the job submitted to it. LPBS provides further tools to manage running jobs.
+performance computing clusters. The LPBS package provides tools to run PBS job
+scripts on a local workstation. Specifically, LPBS provides the `lqsub` command
+that takes the same options as the PBS `qsub` command and runs a job script
+locally, in an environment virtually identical to one that PBS/TORQUE would
+provide. The job will run in the background and be assigned a job ID.  Unlike
+the PBS system, LPBS will not perform any scheduling, but will simply run the
+job submitted to it. LPBS provides further tools to manage running jobs.
 
 [1]: http://en.wikipedia.org/wiki/Portable_Batch_System
 [2]: http://en.wikipedia.org/wiki/TORQUE_Resource_Manager
