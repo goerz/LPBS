@@ -105,7 +105,10 @@ class Notifier:
                     "growl notifications")
                 else:
                     for i, hostname in enumerate(self.growl['hostnames']):
-                        hostname, port = hostname.split(":", 2)
+                        try:
+                            hostname, port = hostname.split(":", 2)
+                        except ValueError:
+                            port = 23053
                         try:
                             port = int(port)
                         except ValueError:
