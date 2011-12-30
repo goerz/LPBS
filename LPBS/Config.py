@@ -22,8 +22,10 @@
 """ Manage Configuration """
 
 from ConfigParser import SafeConfigParser, ParsingError
+from ConfigParser import Error as ConfigParserError
 import os
 import sys
+import re
 from StringIO import StringIO
 
 
@@ -135,6 +137,56 @@ sticky: 0
 logfile: lpbs.log
 """)
 
+
+def verify_config(config):
+    """ Verify that a config data structure conains all valid entries. For those
+        entries that are not valid, print an error message and reset them to a
+        default
+    """
+    try:
+        for (section, key) in [('LPBS', 'username_in_jobid'),
+        ('Scratch', 'create_jobid_folder'), ('Scratch', 'keep_scratch'),
+        ('Scratch', 'delete_failed_scratch'), ('Notification', 'send_mail'),
+        ('Notification', 'send_growl'), ('Mail', 'authenticate'),
+        ('Mail', 'tls'), ('Growl', 'sticky')]:
+            try:
+                config.getboolean(section, key)
+            except ValueError, error:
+                config.set(section, key, 'false')
+                print >> sys.stderr, "Illegal value for %s in Section %s." \
+                        % (section, key)
+                print >> sys.stderr, str(error)
+                print >> sys.stderr, "Set %s to False" % key
+        hostname = config.get('Server', 'hostname')
+        if not re.match(r'^[A-Za-z0-9\-]+$', hostname):
+            print >> sys.stderr, "Server hostname was %s, " % hostname,
+            print >> sys.stderr, "must match '^[A-Za-z0-9\\-]+$'. " \
+                                 "Set to 'localhost'."
+            config.set('Server', 'hostname', 'localhost')
+        domain = config.get('Server', 'domain')
+        if not re.match(r'^[A-Za-z0-9\-\.]+$', domain):
+            print >> sys.stderr, "Server domain was %s, " % hostname,
+            print >> sys.stderr, "must match '^[A-Za-z0-9\\-\\.]+$'. " \
+                                 "Set to 'local'."
+            config.set('Server', 'domain', 'local')
+        hostname = config.get('Node', 'hostname')
+        if not re.match(r'^[A-Za-z0-9\-]+$', hostname):
+            print >> sys.stderr, "Node hostname was %s, " % hostname,
+            print >> sys.stderr, "must match '^[A-Za-z0-9\\-]+$'. " \
+                                 "Set to 'localhost'."
+            config.set('Node', 'hostname', 'localhost')
+        domain = config.get('Node', 'domain')
+        if not re.match(r'^[A-Za-z0-9\-\.]+$', domain):
+            print >> sys.stderr, "Node domain was %s, " % hostname,
+            print >> sys.stderr, "must match '^[A-Za-z0-9\\-\\.]+$'. " \
+                                 "Set to 'local'."
+            config.set('Node', 'domain', 'local')
+    except ConfigParserError, error:
+        print >> sys.stderr, "Unrecoverable error in config data:"
+        print >> sys.stderr, str(error)
+        sys.exit(1)
+
+
 def get_config(config_file):
     """ Return an instance of ConfigParser.SafeConfigParser, loaded with the
         data in
@@ -167,6 +219,7 @@ def get_config(config_file):
     except ParsingError, error:
         print >> sys.stderr, str(error)
 
+    verify_config(config)
     return config
 
 
