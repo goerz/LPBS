@@ -149,10 +149,16 @@ Note that if the default config file is used, the environment variable
 `$SCRATCH_ROOT` must be defined and the directory it points to should exist and
 be writable to all users who might submit jobs.
 
+For a system-wide installation, `/var/lpbs` is a suitable location for
+`$LPBS_HOME`. The environment variable can be set in `/etc/bash.bashrc` for all
+users. For an installation in user space, [virtualenv][3] is recommended.
+
 After the main config file, the file `$HOME/.lpbs.cfg` will also be read. A user
 can use this to override settings in the system configuration. Lastly, the
 `qsub` command also has a `--config` option that allows to specify yet an
 additional config file to be read.
+
+[3]: http://pypi.python.org/pypi/virtualenv
 
 
 ## Usage ##
@@ -189,9 +195,9 @@ The `qsub` command is designed to understand all command line options of the
 `qsub` command in TORQUE version 2.18, except that all options related to
 scheduling are silently ignored. Hence, all PBS job script should be submittable
 without change. For details, run `lqsub`, `lqstat`, and `lqdel` with the
-`--help` option, and/or look at the [TORQUE manual][3].
+`--help` option, and/or look at the [TORQUE manual][4].
 
-[3]: http://www.clusterresources.com/torquedocs21/index.shtml
+[4]: http://www.clusterresources.com/torquedocs21/index.shtml
 
 
 ## An Example Job Script ##
