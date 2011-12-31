@@ -9,3 +9,4 @@ LPBS/JobUtils.py
 LPBS/Notifications.py
 LPBS/PBSFile.py
 README.markdown
+README.rst
