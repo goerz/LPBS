@@ -149,9 +149,11 @@ class Notifier:
             logging.debug("Sending growl notification to host %s",
                           growl_notifier.hostname)
             try:
-                growl_notifier.notify(noteType=growl_type, title=title,
-                description=self._get_notify_description(condition, message),
-                icon = "", sticky = self.growl['sticky'], priority = 1)
+                if test_socket(growl_notifier.hostname, growl_notifier.port):
+                    growl_notifier.notify(noteType=growl_type, title=title,
+                    description=self._get_notify_description(condition,
+                    message), icon="", sticky=self.growl['sticky'],
+                    priority=1)
             except socket.error, error:
                 logging.warn("Can't connect to growl on %s",
                               growl_notifier.hostname)
@@ -193,7 +195,8 @@ class Notifier:
         port=port,
         password = password.strip())
         try:
-            growl_notifier.register()
+            if test_socket(hostname, port):
+                growl_notifier.register()
         except socket.error, error:
             logging.warn("Can't connect to growl on %s:%s",
                           growl_notifier.hostname, port)
@@ -255,3 +258,18 @@ class Notifier:
                 logging.warn("SMTP Exception")
                 logging.debug("%s", error)
 
+
+def test_socket(host, port, timeout=10):
+    """ Check if we can open a socket to the given host:port within the number
+        of seconds specified by timeout. Return True if a connection could be
+        made, False otherwise.
+    """
+    sock = socket.socket()
+    try:
+        sock.settimeout(timeout)
+        sock.connect((host, port))
+        return True
+    except socket.error, error:
+        logging.debug("test_socket(%s,%s,%s) failed: %s",
+                      host, port, timeout, error)
+        return False
