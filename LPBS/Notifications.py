@@ -179,7 +179,6 @@ class Notifier:
             description += "\n" + message
         return description
 
-
     def _register_growl(self, hostname, port=23053, password='', force=False):
         """ Return a GrowlNotifier that's registered with the given
             hostname:port and the given password. If registration fails, return
@@ -188,12 +187,12 @@ class Notifier:
         """
         logging.debug("Registering with growl on %s:%s", hostname, port)
         growl_notifier = gntp_notifier.GrowlNotifier(
-        applicationName = "LPBS",
-        notifications = self.growl_types,
-        defaultNotifications = ["Job Started"],
-        hostname = hostname.strip(),
+        applicationName="LPBS",
+        notifications=self.growl_types,
+        defaultNotifications=["Job Started"],
+        hostname=hostname.strip(),
         port=port,
-        password = password.strip())
+        password=password.strip())
         try:
             if test_socket(hostname, port):
                 growl_notifier.register()
@@ -208,8 +207,6 @@ class Notifier:
             logging.debug("%s", error)
             return None
         return growl_notifier
-
-
 
     def notify_email(self, condition, message=None):
         """ Notify by email """
