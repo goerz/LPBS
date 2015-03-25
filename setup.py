@@ -10,18 +10,20 @@ import os
 def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
+from clusterjob import __version__
+
 setup(name='LPBS',
-      version='0.9.0',
+      version=__version__,
       description='Local Portable Batch System',
       author='Michael Goerz',
-      author_email='goerz@physik.uni-kassel.de',
+      author_email='mail@michaelgoerz.net',
       url='https://github.com/goerz/LPBS',
       license='GPL',
       packages=['LPBS'],
       scripts=['lqsub', 'lqdel', 'lqstat'],
       long_description=read('README.rst'),
       classifiers=[
-          'Development Status :: 3 - Alpha',
+          'Development Status :: 4 - Beta',
           'Environment :: Console',
           'Environment :: No Input/Output (Daemon)',
           'Intended Audience :: Science/Research',

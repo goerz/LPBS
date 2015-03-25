@@ -25,7 +25,7 @@ jobs.
 Installation
 ------------
 
-LPBS can be install from PyPi, using
+LPBS can be installed from PyPi, using
 
 ::
 

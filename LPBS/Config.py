@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 ############################################################################
-#    Copyright (C) 2011 by Michael Goerz                                   #
+#    Copyright (C) 2015 by Michael Goerz                                   #
 #    http://michaelgoerz.net                                               #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
