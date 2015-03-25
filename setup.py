@@ -10,7 +10,7 @@ import os
 def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
-from clusterjob import __version__
+from LPBS import __version__
 
 setup(name='LPBS',
       version=__version__,
