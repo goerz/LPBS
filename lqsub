@@ -106,10 +106,12 @@ def run_pbs_script(pbs_script, job_id, options):
             print >> sys.stderr, "WARNING: Scratch root %s does not exist" \
                         % scratch_root
             logging.warn("Scratch root %s does not exist", scratch_root)
+        job_scratch = ''
         if (options.config.getboolean('Scratch', 'create_jobid_folder')):
             job_scratch = os.path.join(scratch_root, job_id)
             try:
-                os.mkdir(job_scratch)
+                if not os.path.isdir(job_scratch):
+                    os.makedirs(job_scratch)
             except OSError, error:
                 print >> sys.stderr, "Could not create scratch folder: %s" \
                          % error
