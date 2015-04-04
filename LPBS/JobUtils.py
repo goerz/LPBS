@@ -106,6 +106,8 @@ class JobInfo:
         self.pid = None
         self.name = None
         self.owner = None
+        self.queue = 'default'
+        self.status = 'R'
         self.start_time = 0
         self.server = None
         self.exec_host = None
@@ -124,6 +126,8 @@ class JobInfo:
         full_info_str  = "Job Id: %s\n" % self.job_id
         full_info_str += "    Job_Name = %s\n" % self.name
         full_info_str += "    Job_Owner = %s\n" % self.owner
+        full_info_str += "    job_state = %s\n" % self.status
+        full_info_str += "    queue = %s\n" % self.queue
         full_info_str += "    server = %s\n" % self.server
         full_info_str += "    exec_host = %s\n" % self.exec_host
         full_info_str += "    PID = %s\n" % self.pid
@@ -139,17 +143,18 @@ class JobInfo:
         """ Return one-line string with summary of job information """
         short_info_str = ""
         if print_header:
-            short_info_str += "%-20s %-15s %-15s %-15s\n" % (
-                              'Job id', 'Name', 'User', 'Walltime')
-            short_info_str += "%-20s %-15s %-15s %-15s\n" % (
-                              '-'*20, '-'*15, '-'*15, '-'*15 )
+            short_info_str += "%-20s %-15s %-15s %-15s %-1s %-15s\n" % (
+                              'Job id', 'Name', 'User', 'Walltime', 'S',
+                              'Queue')
+            short_info_str += "%-20s %-15s %-15s %-15s %-1s %-15s\n" % (
+                              '-'*20, '-'*15, '-'*15, '-'*15, '-', '-'*15)
 
         walltime = ""
         if self.resources_used.has_key('walltime'):
             walltime = self.resources_used['walltime']
-        short_info_str += "%-20s %-15s %-15s %-15s" % (
+        short_info_str += "%-20s %-15s %-15s %-15s %-1s %-15s" % (
                           self.job_id[:20], self.name[:15], self.owner[:15],
-                          walltime[:15])
+                          walltime[:15], self.status[:1], self.queue[:15])
         return short_info_str
     def set_lock(self, pid):
         """ Create a lock file and store job information inside """

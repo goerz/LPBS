@@ -122,6 +122,8 @@ def run_pbs_script(pbs_script, job_id, options):
         if options.job_name is not None:
             job_name = options.job_name
         job_info.name = job_name
+        if options.queue is not None:
+            job_info.queue = options.queue
         pbs_env = {}
         if options.copy_environment:
             pbs_env = os.environ
@@ -431,13 +433,14 @@ def main(argv=None):
       "default name has the following form: "
       "job_name.osequence_number")
     arg_parser.add_option(
+      '-q', action='store', dest='queue', metavar="DESTINATION",
+      help="Defines the destination of the job. No effect beyond setting"
+      "the queue value in the qstat output")
+    arg_parser.add_option(
       '-p', action='store', dest='priority', metavar="PRIORITY",
       help="(ignored)")
     arg_parser.add_option(
       '-P', action='store', dest='sudo_user', metavar="USER",
-      help="(ignored)")
-    arg_parser.add_option(
-      '-q', action='store', dest='queue', metavar="DESTINATION",
       help="(ignored)")
     arg_parser.add_option(
       '-r', action='store_true', dest='rerunnable', help="(ignored)")
